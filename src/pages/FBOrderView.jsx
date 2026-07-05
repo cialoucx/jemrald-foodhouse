@@ -289,6 +289,11 @@ export default function FBOrderView() {
       const mapped = Object.values(grouped).map((item) => {
         if (item.variants && item.variants.length > 0) item.price = item.variants[0].price;
         return item;
+      }).sort((a, b) => {
+        if (a.category === 'promo' && b.category === 'promo') {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
       });
       setMenuItems(mapped);
     }

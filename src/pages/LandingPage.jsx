@@ -160,7 +160,13 @@ export default function LandingPage() {
             };
           }
         });
-        setMenuItems(Object.values(grouped));
+        const sorted = Object.values(grouped).sort((a, b) => {
+          if (a.category === 'promo' && b.category === 'promo') {
+            return a.name.localeCompare(b.name);
+          }
+          return 0;
+        });
+        setMenuItems(sorted);
       }
     }
     loadMenu();

@@ -203,6 +203,12 @@ export default function CustomerView() {
           item.price = item.variants[0].price;
         }
         return item;
+      }).sort((a, b) => {
+        // Sort promo items alphabetically; leave all others in their original order
+        if (a.category === 'promo' && b.category === 'promo') {
+          return a.name.localeCompare(b.name);
+        }
+        return 0;
       });
 
       setMenuItems(mapped);
