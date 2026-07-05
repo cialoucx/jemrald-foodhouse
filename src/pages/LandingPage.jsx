@@ -41,7 +41,7 @@ export default function LandingPage() {
           const baseCat = d.category;
           const isTakoyaki = baseCat.startsWith('takoyaki-');
 
-          if (baseCat === 'sushi') {
+          if (baseCat === 'sushi' || baseCat === 'kimbap' || baseCat === 'solo') {
             const pcsMatch = d.name.match(/^(\d+)pcs\s+(.+)$/i);
             if (pcsMatch) {
               const baseName = pcsMatch[2].trim();
@@ -51,7 +51,33 @@ export default function LandingPage() {
                   name: baseName,
                   emoji: d.emoji,
                   desc: d.description || '',
-                  category: 'sushi',
+                  category: baseCat,
+                  stock: d.stock,
+                  price: parseFloat(d.price),
+                };
+              }
+            } else {
+              grouped[d.name] = {
+                id: d.id,
+                name: d.name,
+                emoji: d.emoji,
+                desc: d.description || '',
+                price: parseFloat(d.price),
+                category: d.category,
+                stock: d.stock,
+              };
+            }
+          } else if (baseCat === 'baked-sushi') {
+            const sizeMatch = d.name.match(/^(.+)\s+\((Small|Medium|Large)\)$/i);
+            if (sizeMatch) {
+              const baseName = sizeMatch[1].trim();
+              if (!grouped[baseName]) {
+                grouped[baseName] = {
+                  id: d.id,
+                  name: baseName,
+                  emoji: d.emoji,
+                  desc: d.description || '',
+                  category: 'baked-sushi',
                   stock: d.stock,
                   price: parseFloat(d.price),
                 };
@@ -207,7 +233,25 @@ export default function LandingPage() {
             className={`cat-pill ${filter === 'sushi' ? 'active' : ''}`}
             onClick={() => setFilter('sushi')}
           >
-            <Utensils size={16} /> Sushi
+            <Utensils size={16} /> Sushi Platter
+          </button>
+          <button
+            className={`cat-pill ${filter === 'baked-sushi' ? 'active' : ''}`}
+            onClick={() => setFilter('baked-sushi')}
+          >
+            <Utensils size={16} /> Baked Sushi
+          </button>
+          <button
+            className={`cat-pill ${filter === 'kimbap' ? 'active' : ''}`}
+            onClick={() => setFilter('kimbap')}
+          >
+            <Utensils size={16} /> Kimbap
+          </button>
+          <button
+            className={`cat-pill ${filter === 'solo' ? 'active' : ''}`}
+            onClick={() => setFilter('solo')}
+          >
+            <Utensils size={16} /> Solo
           </button>
           <button
             className={`cat-pill ${filter === 'salad' ? 'active' : ''}`}

@@ -567,7 +567,7 @@ export function AddOnsIconSmall({ size = 20, color, style = {} }) {
 // Utility: get category icon component
 export function getCategoryIcon(category, size = 64, color = 'currentColor', style = {}) {
   const cat = (category || '').toLowerCase();
-  if (cat.startsWith('sushi')) return <SushiIcon size={size} color={color} style={style} />;
+  if (cat.startsWith('sushi') || cat === 'baked-sushi' || cat === 'kimbap' || cat === 'solo') return <SushiIcon size={size} color={color} style={style} />;
   if (cat === 'rice') return <RiceIcon size={size} color={color} style={style} />;
   if (cat === 'salad') return <SaladIcon size={size} color={color} style={style} />;
   if (cat.startsWith('takoyaki')) return <TakoyakiIcon size={size} color={color} style={style} />;

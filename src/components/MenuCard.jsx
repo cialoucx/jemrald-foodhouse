@@ -45,6 +45,7 @@ export default function MenuCard({ item, available = true }) {
 
     // California Maki sizes
     '10pcs cheesy overload california maki': '/images/10pcs cheesy overload california maki ₱170.jpg',
+    '50pcs cheesy overload california maki': '/images/10pcs cheesy overload california maki ₱170.jpg',
     'cheesy overload california maki': '/images/10pcs cheesy overload california maki ₱170.jpg',
     '24pcs california maki': '/images/24pcs all california maki ₱320.jpg',
     '50pcs california maki': '/images/50pcs california maki ₱650.jpg',
@@ -60,6 +61,7 @@ export default function MenuCard({ item, available = true }) {
     '60pcs pizza mix maki': '/images/60pcs Pizza mix maki ₱800.jpg',
     '70pcs mix maki': '/images/70pcs. mix maki ₱950.jpg',
     '80pcs mix maki': '/images/80pcs. mix maki ₱1k.jpg',
+    'mix maki with dedication': '/images/80pcs. mix maki ₱1k.jpg',
     '100pcs mix maki': '/images/100pcs. Mix maki ₱1350.jpg',
 
     // Salad

@@ -1012,7 +1012,10 @@ export default function AdminView() {
                       }}
                     >
                       <option value="all">All Categories</option>
-                      <option value="sushi">Sushi</option>
+                      <option value="sushi">Sushi Platter</option>
+                      <option value="baked-sushi">Baked Sushi</option>
+                      <option value="kimbap">Kimbap</option>
+                      <option value="solo">Solo</option>
                       <option value="salad">Salad</option>
                       <option value="takoyaki-8pcs">Takoyaki (8pcs)</option>
                       <option value="takoyaki-10pcs">Takoyaki (10pcs)</option>

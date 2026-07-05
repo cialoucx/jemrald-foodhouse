@@ -147,7 +147,7 @@ export default function FBOrderView() {
       data.forEach((d) => {
         let baseCat = d.category;
         let isTakoyaki = baseCat.startsWith('takoyaki-');
-        if (baseCat === 'sushi') {
+        if (baseCat === 'sushi' || baseCat === 'kimbap' || baseCat === 'solo') {
           const pcsMatch = d.name.match(/^(\d+)pcs\s+(.+)$/i);
           if (pcsMatch) {
             const label = pcsMatch[1] + 'pcs';
@@ -158,7 +158,7 @@ export default function FBOrderView() {
                 name: baseName,
                 emoji: d.emoji,
                 desc: d.description || '',
-                category: 'sushi',
+                category: baseCat,
                 stock: d.stock,
                 variants: [],
               };
@@ -176,9 +176,43 @@ export default function FBOrderView() {
               variants: [],
             };
           }
+        } else if (baseCat === 'baked-sushi') {
+          const sizeMatch = d.name.match(/^(.+)\s+\((Small|Medium|Large)\)$/i);
+          if (sizeMatch) {
+            const baseName = sizeMatch[1].trim();
+            const label = sizeMatch[2];
+            if (!grouped[baseName])
+              grouped[baseName] = {
+                id: d.id,
+                name: baseName,
+                emoji: d.emoji,
+                desc: d.description || '',
+                category: 'baked-sushi',
+                stock: d.stock,
+                variants: [],
+              };
+            grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
+            const sizeOrder = { small: 1, medium: 2, large: 3 };
+            grouped[baseName].variants.sort((a, b) => {
+              const aOrder = sizeOrder[a.label.toLowerCase()] || 99;
+              const bOrder = sizeOrder[b.label.toLowerCase()] || 99;
+              return aOrder - bOrder;
+            });
+          } else {
+            grouped[d.name] = {
+              id: d.id,
+              name: d.name,
+              emoji: d.emoji,
+              desc: d.description || '',
+              price: parseFloat(d.price),
+              category: d.category,
+              stock: d.stock,
+              variants: [],
+            };
+          }
         } else if (isTakoyaki) {
           const baseName = d.name.replace(/\s*\(\d+pcs\)/i, '').trim();
-          const label = baseCat.includes('8') ? '8pcs' : '10pcs';
+          const label = baseCat.replace('takoyaki-', '');
           if (!grouped[baseName])
             grouped[baseName] = {
               id: d.id,
@@ -917,6 +951,9 @@ export default function FBOrderView() {
                   'all',
                   'promo',
                   'sushi',
+                  'baked-sushi',
+                  'kimbap',
+                  'solo',
                   'salad',
                   'takoyaki',
                   'add-ons',
@@ -969,6 +1006,9 @@ export default function FBOrderView() {
                     {cat === 'all' && <AllIconSmall size={16} color="currentColor" />}
                     {cat === 'promo' && <span style={{ fontSize: '14px' }}>🏷️</span>}
                     {cat === 'sushi' && <SushiIconSmall size={16} color="currentColor" />}
+                    {cat === 'baked-sushi' && <SushiIconSmall size={16} color="currentColor" />}
+                    {cat === 'kimbap' && <SushiIconSmall size={16} color="currentColor" />}
+                    {cat === 'solo' && <SushiIconSmall size={16} color="currentColor" />}
                     {cat === 'salad' && <SaladIconSmall size={16} color="currentColor" />}
                     {cat === 'takoyaki' && <TakoyakiIconSmall size={16} color="currentColor" />}
                     {cat === 'add-ons' && <AddOnsIconSmall size={16} />}
@@ -977,7 +1017,15 @@ export default function FBOrderView() {
                       ? 'Add-ons'
                       : cat === 'promo'
                         ? '350 Promo'
-                        : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        : cat === 'baked-sushi'
+                          ? 'Baked Sushi'
+                          : cat === 'kimbap'
+                            ? 'Kimbap'
+                            : cat === 'solo'
+                              ? 'Solo'
+                              : cat === 'sushi'
+                                ? 'Sushi Platter'
+                                : cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </motion.button>
                 ))}
               </div>

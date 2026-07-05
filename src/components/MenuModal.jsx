@@ -108,7 +108,10 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
   };
 
   const categories = [
-    { value: 'sushi', label: 'Sushi' },
+    { value: 'sushi', label: 'Sushi Platter' },
+    { value: 'baked-sushi', label: 'Baked Sushi' },
+    { value: 'kimbap', label: 'Kimbap' },
+    { value: 'solo', label: 'Solo' },
     { value: 'salad', label: 'Salad' },
     { value: 'takoyaki-8pcs', label: 'Takoyaki (8pcs)' },
     { value: 'takoyaki-10pcs', label: 'Takoyaki (10pcs)' },
