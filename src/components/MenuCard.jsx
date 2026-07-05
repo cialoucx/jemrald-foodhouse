@@ -24,8 +24,10 @@ export default function MenuCard({ item, available = true }) {
 
   const customImages = {
     // Specific combos
-    '50pcs california maki and 18pcs harumaki salad': '/images/50pcs California maki and 18pcs Harumaki salad ₱1k.jpg',
-    '50pcs california maki & 18pcs harumaki salad': '/images/50pcs California maki and 18pcs Harumaki salad ₱1k.jpg',
+    '50pcs california maki and 18pcs harumaki salad': '/images/california-maki-harumaki-salad-combo.jpg',
+    '50pcs california maki & 18pcs harumaki salad': '/images/california-maki-harumaki-salad-combo.jpg',
+    'california maki & 18pcs harumaki salad': '/images/california-maki-harumaki-salad-combo.jpg',
+    'california maki and 18pcs harumaki salad': '/images/california-maki-harumaki-salad-combo.jpg',
     '50pcs mix maki and 18pcs harumaki salad': '/images/50pcs California maki and 18pcs Harumaki salad ₱1k.jpg',
     '50pcs mix maki & 18pcs harumaki salad': '/images/50pcs California maki and 18pcs Harumaki salad ₱1k.jpg',
     '30pcs crabgo and 30pcs california maki': '/images/30pcs Crabgo and 30pcs california maki ₱950.jpg',
