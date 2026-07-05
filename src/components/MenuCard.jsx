@@ -65,6 +65,7 @@ export default function MenuCard({ item, available = true }) {
     '100pcs mix maki': '/images/100pcs. Mix maki ₱1350.jpg',
     'all flavors mix': '/images/all-flavors-mix.jpg',
     'bundle (all flavors)': '/images/bundle-all-flavors.jpg',
+    'bundle': '/images/bundle-all-flavors.jpg',
 
     // Salad
     '6pcs harumaki salad': '/images/6pcs harumaki salad ₱125.jpg',
