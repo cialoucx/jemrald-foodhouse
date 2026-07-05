@@ -49,8 +49,9 @@ export default function LandingPage() {
             const pcsMatch = d.name.match(/^(\d+)pcs\s+(.+)$/i);
             if (pcsMatch) {
               const baseName = pcsMatch[2].trim();
-              if (!grouped[baseName]) {
-                grouped[baseName] = {
+              const groupKey = `${baseCat}_${baseName}`;
+              if (!grouped[groupKey]) {
+                grouped[groupKey] = {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
@@ -61,14 +62,15 @@ export default function LandingPage() {
                   price: parseFloat(d.price),
                 };
               } else if (customImage) {
-                grouped[baseName].imageUrl = customImage;
+                grouped[groupKey].imageUrl = customImage;
               }
             } else {
               const parenMatch = d.name.match(/^(.+)\s+\(([^)]+)\)$/i);
               if (parenMatch) {
                 const baseName = parenMatch[1].trim();
-                if (!grouped[baseName]) {
-                  grouped[baseName] = {
+                const groupKey = `${baseCat}_${baseName}`;
+                if (!grouped[groupKey]) {
+                  grouped[groupKey] = {
                     id: d.id,
                     name: baseName,
                     emoji: d.emoji,
@@ -79,10 +81,11 @@ export default function LandingPage() {
                     price: parseFloat(d.price),
                   };
                 } else if (customImage) {
-                  grouped[baseName].imageUrl = customImage;
+                  grouped[groupKey].imageUrl = customImage;
                 }
               } else {
-                grouped[d.name] = {
+                const groupKey = `${baseCat}_${d.name}`;
+                grouped[groupKey] = {
                   id: d.id,
                   name: d.name,
                   emoji: d.emoji,
@@ -98,8 +101,9 @@ export default function LandingPage() {
             const sizeMatch = d.name.match(/^(.+)\s+\((Small|Medium|Large)\)$/i);
             if (sizeMatch) {
               const baseName = sizeMatch[1].trim();
-              if (!grouped[baseName]) {
-                grouped[baseName] = {
+              const groupKey = `baked-sushi_${baseName}`;
+              if (!grouped[groupKey]) {
+                grouped[groupKey] = {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
@@ -110,10 +114,11 @@ export default function LandingPage() {
                   price: parseFloat(d.price),
                 };
               } else if (customImage) {
-                grouped[baseName].imageUrl = customImage;
+                grouped[groupKey].imageUrl = customImage;
               }
             } else {
-              grouped[d.name] = {
+              const groupKey = `baked-sushi_${d.name}`;
+              grouped[groupKey] = {
                 id: d.id,
                 name: d.name,
                 emoji: d.emoji,
@@ -126,8 +131,9 @@ export default function LandingPage() {
             }
           } else if (isTakoyaki) {
             const baseName = d.name.replace(/\s*\(\d+pcs\)/i, '').trim();
-            if (!grouped[baseName]) {
-              grouped[baseName] = {
+            const groupKey = `takoyaki_${baseName}`;
+            if (!grouped[groupKey]) {
+              grouped[groupKey] = {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
@@ -138,10 +144,11 @@ export default function LandingPage() {
                 price: parseFloat(d.price),
               };
             } else if (customImage) {
-              grouped[baseName].imageUrl = customImage;
+              grouped[groupKey].imageUrl = customImage;
             }
           } else {
-            grouped[d.name] = {
+            const groupKey = `${baseCat}_${d.name}`;
+            grouped[groupKey] = {
               id: d.id,
               name: d.name,
               emoji: d.emoji,

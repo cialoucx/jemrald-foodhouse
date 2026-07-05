@@ -157,8 +157,9 @@ export default function FBOrderView() {
           if (pcsMatch) {
             const label = pcsMatch[1] + 'pcs';
             const baseName = pcsMatch[2].trim();
-            if (!grouped[baseName]) {
-              grouped[baseName] = {
+            const groupKey = `${baseCat}_${baseName}`;
+            if (!grouped[groupKey]) {
+              grouped[groupKey] = {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
@@ -169,17 +170,18 @@ export default function FBOrderView() {
                 variants: [],
               };
             } else if (customImage) {
-              grouped[baseName].imageUrl = customImage;
+              grouped[groupKey].imageUrl = customImage;
             }
-            grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
-            grouped[baseName].variants.sort((a, b) => parseInt(a.label) - parseInt(b.label));
+            grouped[groupKey].variants.push({ label, price: parseFloat(d.price) });
+            grouped[groupKey].variants.sort((a, b) => parseInt(a.label) - parseInt(b.label));
           } else {
             const parenMatch = d.name.match(/^(.+)\s+\(([^)]+)\)$/i);
             if (parenMatch) {
               const baseName = parenMatch[1].trim();
               const label = parenMatch[2].trim();
-              if (!grouped[baseName]) {
-                grouped[baseName] = {
+              const groupKey = `${baseCat}_${baseName}`;
+              if (!grouped[groupKey]) {
+                grouped[groupKey] = {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
@@ -190,11 +192,12 @@ export default function FBOrderView() {
                   variants: [],
                 };
               } else if (customImage) {
-                grouped[baseName].imageUrl = customImage;
+                grouped[groupKey].imageUrl = customImage;
               }
-              grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
+              grouped[groupKey].variants.push({ label, price: parseFloat(d.price) });
             } else {
-              grouped[d.name] = {
+              const groupKey = `${baseCat}_${d.name}`;
+              grouped[groupKey] = {
                 id: d.id,
                 name: d.name,
                 emoji: d.emoji,
@@ -212,8 +215,9 @@ export default function FBOrderView() {
           if (sizeMatch) {
             const baseName = sizeMatch[1].trim();
             const label = sizeMatch[2];
-            if (!grouped[baseName]) {
-              grouped[baseName] = {
+            const groupKey = `baked-sushi_${baseName}`;
+            if (!grouped[groupKey]) {
+              grouped[groupKey] = {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
@@ -224,17 +228,18 @@ export default function FBOrderView() {
                 variants: [],
               };
             } else if (customImage) {
-              grouped[baseName].imageUrl = customImage;
+              grouped[groupKey].imageUrl = customImage;
             }
-            grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
+            grouped[groupKey].variants.push({ label, price: parseFloat(d.price) });
             const sizeOrder = { small: 1, medium: 2, large: 3 };
-            grouped[baseName].variants.sort((a, b) => {
+            grouped[groupKey].variants.sort((a, b) => {
               const aOrder = sizeOrder[a.label.toLowerCase()] || 99;
               const bOrder = sizeOrder[b.label.toLowerCase()] || 99;
               return aOrder - bOrder;
             });
           } else {
-            grouped[d.name] = {
+            const groupKey = `baked-sushi_${d.name}`;
+            grouped[groupKey] = {
               id: d.id,
               name: d.name,
               emoji: d.emoji,
@@ -249,8 +254,9 @@ export default function FBOrderView() {
         } else if (isTakoyaki) {
           const baseName = d.name.replace(/\s*\(\d+pcs\)/i, '').trim();
           const label = baseCat.replace('takoyaki-', '');
-          if (!grouped[baseName]) {
-            grouped[baseName] = {
+          const groupKey = `takoyaki_${baseName}`;
+          if (!grouped[groupKey]) {
+            grouped[groupKey] = {
               id: d.id,
               name: baseName,
               emoji: d.emoji,
@@ -261,12 +267,13 @@ export default function FBOrderView() {
               variants: [],
             };
           } else if (customImage) {
-            grouped[baseName].imageUrl = customImage;
+            grouped[groupKey].imageUrl = customImage;
           }
-          grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
-          grouped[baseName].variants.sort((a, b) => a.label.localeCompare(b.label));
+          grouped[groupKey].variants.push({ label, price: parseFloat(d.price) });
+          grouped[groupKey].variants.sort((a, b) => a.label.localeCompare(b.label));
         } else {
-          grouped[d.name] = {
+          const groupKey = `${baseCat}_${d.name}`;
+          grouped[groupKey] = {
             id: d.id,
             name: d.name,
             emoji: d.emoji,

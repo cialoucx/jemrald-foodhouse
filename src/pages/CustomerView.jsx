@@ -66,8 +66,9 @@ export default function CustomerView() {
           if (pcsMatch) {
             const label = pcsMatch[1] + 'pcs';
             const baseName = pcsMatch[2].trim();
-            if (!grouped[baseName]) {
-              grouped[baseName] = {
+            const groupKey = `${baseCat}_${baseName}`;
+            if (!grouped[groupKey]) {
+              grouped[groupKey] = {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
@@ -78,10 +79,10 @@ export default function CustomerView() {
                 variants: [],
               };
             } else if (customImage) {
-              grouped[baseName].imageUrl = customImage;
+              grouped[groupKey].imageUrl = customImage;
             }
-            grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
-            grouped[baseName].variants.sort((a, b) => {
+            grouped[groupKey].variants.push({ label, price: parseFloat(d.price) });
+            grouped[groupKey].variants.sort((a, b) => {
               const aNum = parseInt(a.label);
               const bNum = parseInt(b.label);
               return aNum - bNum;
@@ -92,8 +93,9 @@ export default function CustomerView() {
             if (parenMatch) {
               const baseName = parenMatch[1].trim();
               const label = parenMatch[2].trim();
-              if (!grouped[baseName]) {
-                grouped[baseName] = {
+              const groupKey = `${baseCat}_${baseName}`;
+              if (!grouped[groupKey]) {
+                grouped[groupKey] = {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
@@ -104,11 +106,12 @@ export default function CustomerView() {
                   variants: [],
                 };
               } else if (customImage) {
-                grouped[baseName].imageUrl = customImage;
+                grouped[groupKey].imageUrl = customImage;
               }
-              grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
+              grouped[groupKey].variants.push({ label, price: parseFloat(d.price) });
             } else {
-              grouped[d.name] = {
+              const groupKey = `${baseCat}_${d.name}`;
+              grouped[groupKey] = {
                 id: d.id,
                 name: d.name,
                 emoji: d.emoji,
