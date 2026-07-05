@@ -1014,6 +1014,7 @@ export default function AdminView() {
                       }}
                     >
                       <option value="all">All Categories</option>
+                      <option value="promo">350 Promo</option>
                       <option value="sushi">Sushi Platter</option>
                       <option value="baked-sushi">Baked Sushi</option>
                       <option value="kimbap">Kimbap</option>

@@ -163,6 +163,7 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
   };
 
   const categories = [
+    { value: 'promo', label: '350 Promo' },
     { value: 'sushi', label: 'Sushi Platter' },
     { value: 'baked-sushi', label: 'Baked Sushi' },
     { value: 'kimbap', label: 'Kimbap' },
