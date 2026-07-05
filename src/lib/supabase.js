@@ -49,7 +49,7 @@ if (isBrowser) {
 const defaultMenuItems = [
   // Promo (Sets A to J)
   { id: 101, name: 'Set A', category: 'promo', price: 350, stock: 30, emoji: '🏷️', description: 'Promo Set A Platter' },
-  { id: 102, name: 'Set B', category: 'promo', price: 350, stock: 30, emoji: '🏷️', description: 'Promo Set B Platter' },
+  { id: 102, name: 'Set B - Cheese, Mango & California Maki', category: 'promo', price: 350, stock: 30, emoji: '🏷️', description: '1 Cheese Maki + 1 Mango Maki + 1 California Maki ||image:/images/set-b-promo.jpg' },
   { id: 103, name: 'Set C', category: 'promo', price: 350, stock: 30, emoji: '🏷️', description: 'Promo Set C Platter' },
   { id: 104, name: 'Set D', category: 'promo', price: 350, stock: 30, emoji: '🏷️', description: 'Promo Set D Platter' },
   { id: 105, name: 'Set E', category: 'promo', price: 350, stock: 30, emoji: '🏷️', description: 'Promo Set E Platter' },

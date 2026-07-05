@@ -37,7 +37,7 @@ export default function FBMenuCard({ item, available = true }) {
 
     // Set promos
     'set a': '/images/set a.jpg',
-    'set b': '/images/set b.jpg',
+    'set b': '/images/set-b-promo.jpg',
     'set c': '/images/set c.jpg',
     'set d': '/images/set d.jpg',
     'set e': '/images/set e.jpg',
