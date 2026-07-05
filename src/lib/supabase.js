@@ -152,7 +152,9 @@ const defaultMenuItems = [
   { id: 184, name: 'California Maki', category: 'solo', price: 115, stock: 50, emoji: '🍣', description: 'Classic California maki' },
   { id: 177, name: 'Sweet Molly', category: 'solo', price: 120, stock: 50, emoji: '🍣', description: 'Sweet maki roll' },
   { id: 165, name: 'Crabgo Sushi', category: 'solo', price: 150, stock: 50, emoji: '🍣', description: 'Kani crab sushi' },
-  { id: 168, name: 'Mix Chessy and Spicy Overload', category: 'solo', price: 170, stock: 50, emoji: '🍣', description: 'Cheesy and spicy overload maki' },
+  { id: 168, name: 'Mix Chessy and Spicy Overload (Mix)', category: 'solo', price: 170, stock: 50, emoji: '🍣', description: 'Cheesy and spicy overload maki' },
+  { id: 217, name: 'Mix Chessy and Spicy Overload (Cheesy Overload)', category: 'solo', price: 170, stock: 50, emoji: '🍣', description: 'Cheesy overload maki variant' },
+  { id: 218, name: 'Mix Chessy and Spicy Overload (Spicy Overload)', category: 'solo', price: 170, stock: 50, emoji: '🍣', description: 'Spicy overload maki variant' },
 
   // Rice
   { id: 38, name: 'Chicken Torikatsu', category: 'rice', price: 140, stock: 50, emoji: '🍚', description: 'Crispy chicken torikatsu with rice' },

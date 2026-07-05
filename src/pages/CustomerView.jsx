@@ -81,16 +81,34 @@ export default function CustomerView() {
             });
           } else {
             // No pcs prefix (e.g. "Bundle (All Flavors)")
-            grouped[d.name] = {
-              id: d.id,
-              name: d.name,
-              emoji: d.emoji,
-              desc: d.description || '',
-              price: parseFloat(d.price),
-              category: d.category,
-              stock: d.stock,
-              variants: [],
-            };
+            const parenMatch = d.name.match(/^(.+)\s+\(([^)]+)\)$/i);
+            if (parenMatch) {
+              const baseName = parenMatch[1].trim();
+              const label = parenMatch[2].trim();
+              if (!grouped[baseName]) {
+                grouped[baseName] = {
+                  id: d.id,
+                  name: baseName,
+                  emoji: d.emoji,
+                  desc: d.description || '',
+                  category: baseCat,
+                  stock: d.stock,
+                  variants: [],
+                };
+              }
+              grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
+            } else {
+              grouped[d.name] = {
+                id: d.id,
+                name: d.name,
+                emoji: d.emoji,
+                desc: d.description || '',
+                price: parseFloat(d.price),
+                category: d.category,
+                stock: d.stock,
+                variants: [],
+              };
+            }
           }
         } else if (baseCat === 'baked-sushi') {
           const sizeMatch = d.name.match(/^(.+)\s+\((Small|Medium|Large)\)$/i);
