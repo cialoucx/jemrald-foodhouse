@@ -65,6 +65,7 @@ export default function FBMenuCard({ item, available = true }) {
     '80pcs mix maki': '/images/80pcs. mix maki ₱1k.jpg',
     'mix maki with dedication': '/images/80pcs. mix maki ₱1k.jpg',
     '100pcs mix maki': '/images/100pcs. Mix maki ₱1350.jpg',
+    'all flavors mix': '/images/all-flavors-mix.jpg',
 
     // Salad
     '6pcs harumaki salad': '/images/6pcs harumaki salad ₱125.jpg',
