@@ -250,6 +250,7 @@ export default function AdminView() {
             price: formData.price,
             stock: formData.stock,
             emoji: formData.emoji,
+            description: formData.description,
           })
           .eq('id', editingItem.id);
 
@@ -271,6 +272,7 @@ export default function AdminView() {
               price: formData.price,
               stock: formData.stock,
               emoji: formData.emoji,
+              description: formData.description,
             },
           ])
           .select();

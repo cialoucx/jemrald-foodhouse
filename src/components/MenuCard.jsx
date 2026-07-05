@@ -125,8 +125,8 @@ export default function MenuCard({ item, available = true }) {
   const matchedCustomImage = Object.entries(customImages).find(([key]) =>
     itemNameLower.includes(key)
   );
-  const hasCustomImage = !!matchedCustomImage;
-  const customImagePath = hasCustomImage ? matchedCustomImage[1] : null;
+  const hasCustomImage = !!item.imageUrl || !!matchedCustomImage;
+  const customImagePath = item.imageUrl || (hasCustomImage ? matchedCustomImage[1] : null);
 
   return (
     <>

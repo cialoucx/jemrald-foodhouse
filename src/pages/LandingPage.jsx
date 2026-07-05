@@ -41,6 +41,10 @@ export default function LandingPage() {
           const baseCat = d.category;
           const isTakoyaki = baseCat.startsWith('takoyaki-');
 
+          const rawDesc = d.description || '';
+          const cleanDesc = rawDesc.split(' ||image:')[0];
+          const customImage = rawDesc.includes(' ||image:') ? rawDesc.split(' ||image:')[1] : null;
+
           if (baseCat === 'sushi' || baseCat === 'kimbap' || baseCat === 'solo') {
             const pcsMatch = d.name.match(/^(\d+)pcs\s+(.+)$/i);
             if (pcsMatch) {
@@ -50,11 +54,14 @@ export default function LandingPage() {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
-                  desc: d.description || '',
+                  desc: cleanDesc,
+                  imageUrl: customImage,
                   category: baseCat,
                   stock: d.stock,
                   price: parseFloat(d.price),
                 };
+              } else if (customImage) {
+                grouped[baseName].imageUrl = customImage;
               }
             } else {
               const parenMatch = d.name.match(/^(.+)\s+\(([^)]+)\)$/i);
@@ -65,18 +72,22 @@ export default function LandingPage() {
                     id: d.id,
                     name: baseName,
                     emoji: d.emoji,
-                    desc: d.description || '',
+                    desc: cleanDesc,
+                    imageUrl: customImage,
                     category: baseCat,
                     stock: d.stock,
                     price: parseFloat(d.price),
                   };
+                } else if (customImage) {
+                  grouped[baseName].imageUrl = customImage;
                 }
               } else {
                 grouped[d.name] = {
                   id: d.id,
                   name: d.name,
                   emoji: d.emoji,
-                  desc: d.description || '',
+                  desc: cleanDesc,
+                  imageUrl: customImage,
                   price: parseFloat(d.price),
                   category: d.category,
                   stock: d.stock,
@@ -92,18 +103,22 @@ export default function LandingPage() {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
-                  desc: d.description || '',
+                  desc: cleanDesc,
+                  imageUrl: customImage,
                   category: 'baked-sushi',
                   stock: d.stock,
                   price: parseFloat(d.price),
                 };
+              } else if (customImage) {
+                grouped[baseName].imageUrl = customImage;
               }
             } else {
               grouped[d.name] = {
                 id: d.id,
                 name: d.name,
                 emoji: d.emoji,
-                desc: d.description || '',
+                desc: cleanDesc,
+                imageUrl: customImage,
                 price: parseFloat(d.price),
                 category: d.category,
                 stock: d.stock,
@@ -116,18 +131,22 @@ export default function LandingPage() {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
-                desc: d.description || '',
+                desc: cleanDesc,
+                imageUrl: customImage,
                 category: 'takoyaki',
                 stock: d.stock,
                 price: parseFloat(d.price),
               };
+            } else if (customImage) {
+              grouped[baseName].imageUrl = customImage;
             }
           } else {
             grouped[d.name] = {
               id: d.id,
               name: d.name,
               emoji: d.emoji,
-              desc: d.description || '',
+              desc: cleanDesc,
+              imageUrl: customImage,
               price: parseFloat(d.price),
               category: d.category,
               stock: d.stock,

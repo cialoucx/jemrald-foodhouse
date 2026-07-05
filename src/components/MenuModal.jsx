@@ -11,19 +11,28 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
     price: '',
     stock: '',
     emoji: '',
+    description: '',
+    imageUrl: '',
   });
   const [recipeRows, setRecipeRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (editingItem) {
+      const rawDesc = editingItem.description || '';
+      const cleanDesc = rawDesc.split(' ||image:')[0];
+      const initialImageUrl = rawDesc.includes(' ||image:') ? rawDesc.split(' ||image:')[1] : '';
+
       setFormData({
         name: editingItem.name || '',
         category: editingItem.category || 'rice',
         price: editingItem.price || '',
         stock: editingItem.stock || '',
-        emoji: '',
+        emoji: editingItem.emoji || '',
+        description: cleanDesc,
+        imageUrl: initialImageUrl,
       });
       // Load existing recipes for this menu item
       loadRecipes(editingItem.id);
@@ -34,6 +43,8 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
         price: '',
         stock: '',
         emoji: '',
+        description: '',
+        imageUrl: '',
       });
       setRecipeRows([]);
     }
@@ -67,6 +78,37 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
     setRecipeRows((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setError('');
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `menu-${Date.now()}.${fileExt}`;
+      const filePath = `menu-items/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: data.publicUrl
+      }));
+    } catch (err) {
+      setError(err.message || 'Failed to upload image.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price || !formData.stock) {
@@ -79,8 +121,21 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
 
     setLoading(true);
     try {
+      const finalDesc = formData.imageUrl 
+        ? `${formData.description.trim()} ||image:${formData.imageUrl}` 
+        : formData.description.trim();
+
+      const savePayload = {
+        name: formData.name,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        emoji: formData.emoji,
+        description: finalDesc,
+      };
+
       // Save the menu item (parent handles insert/update and returns the saved item)
-      const savedItem = await onSave(formData);
+      const savedItem = await onSave(savePayload);
 
       // Save recipes if we have a menu item ID
       const menuItemId = editingItem?.id || savedItem?.id;
@@ -244,6 +299,78 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
                   placeholder="e.g. Salmon Aburi"
                   style={inputStyle}
                 />
+              </div>
+
+              {/* Description Input */}
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={labelStyle}>Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="e.g. Delicious roll topped with cheese"
+                  rows={2}
+                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              {/* Image Upload field */}
+              <div className="form-group" style={{ marginBottom: '24px' }}>
+                <label style={labelStyle}>Custom Image</label>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  {formData.imageUrl && (
+                    <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
+                      <img src={formData.imageUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  )}
+                  <div style={{ flexGrow: 1 }}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="menu-item-image-file"
+                      onChange={handleImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                    <label
+                      htmlFor="menu-item-image-file"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '10px 16px',
+                        background: 'var(--surface2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        color: 'var(--cream)',
+                        fontSize: '0.8rem',
+                        fontWeight: 500,
+                        cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                        transition: 'background 0.2s',
+                      }}
+                    >
+                      {uploadingImage ? 'Uploading...' : formData.imageUrl ? 'Change Image' : 'Upload Image'}
+                    </label>
+                    {formData.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                        style={{
+                          marginLeft: '12px',
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--red-bright)',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                    <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: '6px' }}>
+                      Recommended: square image, under 2MB.
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div

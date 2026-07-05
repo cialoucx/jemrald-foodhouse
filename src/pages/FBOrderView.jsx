@@ -147,21 +147,30 @@ export default function FBOrderView() {
       data.forEach((d) => {
         let baseCat = d.category;
         let isTakoyaki = baseCat.startsWith('takoyaki-');
+
+        const rawDesc = d.description || '';
+        const cleanDesc = rawDesc.split(' ||image:')[0];
+        const customImage = rawDesc.includes(' ||image:') ? rawDesc.split(' ||image:')[1] : null;
+
         if (baseCat === 'sushi' || baseCat === 'kimbap' || baseCat === 'solo') {
           const pcsMatch = d.name.match(/^(\d+)pcs\s+(.+)$/i);
           if (pcsMatch) {
             const label = pcsMatch[1] + 'pcs';
             const baseName = pcsMatch[2].trim();
-            if (!grouped[baseName])
+            if (!grouped[baseName]) {
               grouped[baseName] = {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
-                desc: d.description || '',
+                desc: cleanDesc,
+                imageUrl: customImage,
                 category: baseCat,
                 stock: d.stock,
                 variants: [],
               };
+            } else if (customImage) {
+              grouped[baseName].imageUrl = customImage;
+            }
             grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
             grouped[baseName].variants.sort((a, b) => parseInt(a.label) - parseInt(b.label));
           } else {
@@ -174,11 +183,14 @@ export default function FBOrderView() {
                   id: d.id,
                   name: baseName,
                   emoji: d.emoji,
-                  desc: d.description || '',
+                  desc: cleanDesc,
+                  imageUrl: customImage,
                   category: baseCat,
                   stock: d.stock,
                   variants: [],
                 };
+              } else if (customImage) {
+                grouped[baseName].imageUrl = customImage;
               }
               grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
             } else {
@@ -186,7 +198,8 @@ export default function FBOrderView() {
                 id: d.id,
                 name: d.name,
                 emoji: d.emoji,
-                desc: d.description || '',
+                desc: cleanDesc,
+                imageUrl: customImage,
                 price: parseFloat(d.price),
                 category: d.category,
                 stock: d.stock,
@@ -199,16 +212,20 @@ export default function FBOrderView() {
           if (sizeMatch) {
             const baseName = sizeMatch[1].trim();
             const label = sizeMatch[2];
-            if (!grouped[baseName])
+            if (!grouped[baseName]) {
               grouped[baseName] = {
                 id: d.id,
                 name: baseName,
                 emoji: d.emoji,
-                desc: d.description || '',
+                desc: cleanDesc,
+                imageUrl: customImage,
                 category: 'baked-sushi',
                 stock: d.stock,
                 variants: [],
               };
+            } else if (customImage) {
+              grouped[baseName].imageUrl = customImage;
+            }
             grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
             const sizeOrder = { small: 1, medium: 2, large: 3 };
             grouped[baseName].variants.sort((a, b) => {
@@ -221,7 +238,8 @@ export default function FBOrderView() {
               id: d.id,
               name: d.name,
               emoji: d.emoji,
-              desc: d.description || '',
+              desc: cleanDesc,
+              imageUrl: customImage,
               price: parseFloat(d.price),
               category: d.category,
               stock: d.stock,
@@ -231,16 +249,20 @@ export default function FBOrderView() {
         } else if (isTakoyaki) {
           const baseName = d.name.replace(/\s*\(\d+pcs\)/i, '').trim();
           const label = baseCat.replace('takoyaki-', '');
-          if (!grouped[baseName])
+          if (!grouped[baseName]) {
             grouped[baseName] = {
               id: d.id,
               name: baseName,
               emoji: d.emoji,
-              desc: d.description || '',
+              desc: cleanDesc,
+              imageUrl: customImage,
               category: 'takoyaki',
               stock: d.stock,
               variants: [],
             };
+          } else if (customImage) {
+            grouped[baseName].imageUrl = customImage;
+          }
           grouped[baseName].variants.push({ label, price: parseFloat(d.price) });
           grouped[baseName].variants.sort((a, b) => a.label.localeCompare(b.label));
         } else {
@@ -248,7 +270,8 @@ export default function FBOrderView() {
             id: d.id,
             name: d.name,
             emoji: d.emoji,
-            desc: d.description || '',
+            desc: cleanDesc,
+            imageUrl: customImage,
             price: parseFloat(d.price),
             category: d.category,
             stock: d.stock,
