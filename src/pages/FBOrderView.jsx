@@ -2280,32 +2280,44 @@ export default function FBOrderView() {
             >
               Delivery Address *
             </label>
-            <textarea
-              id="fb-address"
-              value={address}
-              onChange={(e) => handleAddressChange(e.target.value)}
-              placeholder="House #, Street, Barangay"
-              rows="3"
-              style={{
-                width: '100%',
-                padding: '14px 16px',
-                background: '#ffffff',
-                border: '1px solid rgba(198, 40, 57, 0.15)',
-                color: '#1e140f',
-                borderRadius: '16px',
-                resize: 'none',
-                fontSize: '0.92rem',
-                outline: 'none',
-                fontFamily: '"Outfit", sans-serif',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = '#C62839')}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)';
-                setTimeout(() => {
-                  setSuggestions([]);
-                }, 250);
-              }}
-            ></textarea>
+            <div style={{ position: 'relative' }}>
+              <Search
+                size={18}
+                style={{
+                  position: 'absolute',
+                  left: '16px',
+                  top: '16px',
+                  color: '#8c7d75',
+                  pointerEvents: 'none',
+                }}
+              />
+              <textarea
+                id="fb-address"
+                value={address}
+                onChange={(e) => handleAddressChange(e.target.value)}
+                placeholder="House #, Street, Barangay"
+                rows="3"
+                style={{
+                  width: '100%',
+                  padding: '14px 16px 14px 44px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(198, 40, 57, 0.15)',
+                  color: '#1e140f',
+                  borderRadius: '16px',
+                  resize: 'none',
+                  fontSize: '0.92rem',
+                  outline: 'none',
+                  fontFamily: '"Outfit", sans-serif',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = '#C62839')}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)';
+                  setTimeout(() => {
+                    setSuggestions([]);
+                  }, 250);
+                }}
+              ></textarea>
+            </div>
 
             {/* Google-style Autocomplete Dropdown List */}
             <AnimatePresence>
