@@ -144,6 +144,7 @@ export default function FBOrderView() {
   const [isLocating, setIsLocating] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   // Schedule for Later
   const [isScheduled, setIsScheduled] = useState(false);
@@ -303,7 +304,38 @@ export default function FBOrderView() {
     setAddress(sug.display_name);
     setCoords([sug.lat, sug.lon]);
     setSuggestions([]);
+    setActiveIndex(-1);
     setMapError('');
+  };
+
+  const handleKeyDown = (e) => {
+    if (suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < suggestions.length) {
+        handleSuggestionSelect(suggestions[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setSuggestions([]);
+      setActiveIndex(-1);
+    }
+  };
+
+  const renderHighlightedText = (text, search) => {
+    if (!search) return text;
+    const cleanSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${cleanSearch})`, 'gi'));
+    return parts.map((part, index) => 
+      part.toLowerCase() === search.toLowerCase() 
+        ? <span key={index} style={{ color: '#C62839', fontWeight: '700', backgroundColor: 'rgba(198, 40, 57, 0.06)', borderRadius: '2px', padding: '0 2px' }}>{part}</span> 
+        : part
+    );
   };
 
   useEffect(() => {
@@ -2295,11 +2327,12 @@ export default function FBOrderView() {
                 id="fb-address"
                 value={address}
                 onChange={(e) => handleAddressChange(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="House #, Street, Barangay"
                 rows="3"
                 style={{
                   width: '100%',
-                  padding: '14px 16px 14px 44px',
+                  padding: '14px 44px 14px 44px', // left and right padding to clear icons
                   background: '#ffffff',
                   border: '1px solid rgba(198, 40, 57, 0.15)',
                   color: '#1e140f',
@@ -2314,12 +2347,62 @@ export default function FBOrderView() {
                   e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)';
                   setTimeout(() => {
                     setSuggestions([]);
+                    setActiveIndex(-1);
                   }, 250);
                 }}
               ></textarea>
+              
+              {/* Spinner Loader when searching */}
+              {isSearching && (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, ease: 'linear', duration: 0.8 }}
+                  style={{
+                    position: 'absolute',
+                    right: address ? '44px' : '16px',
+                    top: '16px',
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid rgba(198, 40, 57, 0.15)',
+                    borderTopColor: '#C62839',
+                    borderRadius: '50%',
+                  }}
+                />
+              )}
+
+              {/* Clear button (Visible when text exists) */}
+              {address && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddress('');
+                    setSuggestions([]);
+                    setActiveIndex(-1);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '16px',
+                    top: '14px',
+                    background: 'rgba(46, 42, 40, 0.05)',
+                    border: 'none',
+                    color: '#8c7d75',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0,
+                  }}
+                  aria-label="Clear search"
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              )}
             </div>
 
-            {/* Google-style Autocomplete Dropdown List */}
+            {/* Google/GrabFood-style Autocomplete Dropdown List */}
             <AnimatePresence>
               {suggestions.length > 0 && (
                 <motion.div
@@ -2335,9 +2418,9 @@ export default function FBOrderView() {
                     border: '1px solid rgba(198, 40, 57, 0.15)',
                     borderRadius: '16px',
                     marginTop: '6px',
-                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
+                    boxShadow: '0 12px 30px rgba(46, 42, 40, 0.08)',
                     zIndex: 1000,
-                    maxHeight: '220px',
+                    maxHeight: '260px',
                     overflowY: 'auto',
                   }}
                 >
@@ -2346,21 +2429,42 @@ export default function FBOrderView() {
                       key={idx}
                       onClick={() => handleSuggestionSelect(sug)}
                       style={{
-                        padding: '12px 16px',
-                        fontSize: '0.88rem',
-                        color: '#2E2A28',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        padding: '14px 18px',
                         cursor: 'pointer',
-                        borderBottom: idx === suggestions.length - 1 ? 'none' : '1px solid rgba(46, 42, 40, 0.05)',
+                        borderBottom: idx === suggestions.length - 1 ? 'none' : '1px solid rgba(46, 42, 40, 0.04)',
                         fontFamily: '"Outfit", sans-serif',
                         textAlign: 'left',
                         transition: 'background-color 0.2s',
+                        background: idx === activeIndex ? 'rgba(198, 40, 57, 0.04)' : '#ffffff',
                       }}
-                      onMouseEnter={(e) => (e.target.style.backgroundColor = '#FAF7F2')}
-                      onMouseLeave={(e) => (e.target.style.backgroundColor = '#ffffff')}
+                      onMouseEnter={() => setActiveIndex(idx)}
                     >
-                      <div style={{ fontWeight: 600, color: '#1e140f' }}>{sug.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#8c7d75', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                        {sug.display_name}
+                      {/* Location Pin Icon Frame */}
+                      <div
+                        style={{
+                          background: 'rgba(198, 40, 57, 0.08)',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: '12px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MapPin size={16} color="#C62839" />
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#1e140f', fontSize: '0.92rem', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {renderHighlightedText(sug.name, address)}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#8c7d75', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {renderHighlightedText(sug.display_name, address)}
+                        </div>
                       </div>
                     </div>
                   ))}
