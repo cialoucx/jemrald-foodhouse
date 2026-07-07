@@ -237,7 +237,7 @@ export default function FBOrderView() {
     if (!queryAddress || queryAddress.trim().length < 6) return;
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1&countrycodes=ph`,
         {
           headers: {
             'Accept-Language': 'en',
@@ -265,7 +265,7 @@ export default function FBOrderView() {
     setIsSearching(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=ph`,
         {
           headers: {
             'Accept-Language': 'en',
