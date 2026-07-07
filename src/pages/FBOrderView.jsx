@@ -142,6 +142,8 @@ export default function FBOrderView() {
   const [coords, setCoords] = useState(DEFAULT_CENTER);
   const [mapError, setMapError] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Schedule for Later
   const [isScheduled, setIsScheduled] = useState(false);
@@ -255,14 +257,53 @@ export default function FBOrderView() {
     }
   };
 
+  const fetchSuggestions = async (query) => {
+    if (!query || query.trim().length < 4) {
+      setSuggestions([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'JemraldFoodhouse/1.0',
+          },
+        }
+      );
+      if (!response.ok) throw new Error('Nominatim error');
+      const data = await response.json();
+      const formatted = data.map((item) => ({
+        display_name: item.display_name,
+        name: item.name || item.display_name.split(',')[0],
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+      }));
+      setSuggestions(formatted);
+    } catch (err) {
+      console.error('Suggestions fetch error:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleAddressChange = (val) => {
     setAddress(val);
     if (geocodeTimeoutRef.current) {
       clearTimeout(geocodeTimeoutRef.current);
     }
     geocodeTimeoutRef.current = setTimeout(() => {
-      forwardGeocode(val);
-    }, 1200);
+      fetchSuggestions(val);
+    }, 600); // 600ms typing delay for fast autocomplete
+  };
+
+  const handleSuggestionSelect = (sug) => {
+    setAddress(sug.display_name);
+    setCoords([sug.lat, sug.lon]);
+    setSuggestions([]);
+    setMapError('');
   };
 
   useEffect(() => {
@@ -2223,7 +2264,7 @@ export default function FBOrderView() {
             )}
           </div>
 
-          <div className="form-group" style={{ marginBottom: '16px' }}>
+          <div className="form-group" style={{ marginBottom: '16px', position: 'relative' }}>
             <label
               htmlFor="fb-address"
               style={{
@@ -2258,8 +2299,62 @@ export default function FBOrderView() {
                 fontFamily: '"Outfit", sans-serif',
               }}
               onFocus={(e) => (e.target.style.borderColor = '#C62839')}
-              onBlur={(e) => (e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)')}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)';
+                setTimeout(() => {
+                  setSuggestions([]);
+                }, 250);
+              }}
             ></textarea>
+
+            {/* Google-style Autocomplete Dropdown List */}
+            <AnimatePresence>
+              {suggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: '#ffffff',
+                    border: '1px solid rgba(198, 40, 57, 0.15)',
+                    borderRadius: '16px',
+                    marginTop: '6px',
+                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
+                    zIndex: 1000,
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {suggestions.map((sug, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSuggestionSelect(sug)}
+                      style={{
+                        padding: '12px 16px',
+                        fontSize: '0.88rem',
+                        color: '#2E2A28',
+                        cursor: 'pointer',
+                        borderBottom: idx === suggestions.length - 1 ? 'none' : '1px solid rgba(46, 42, 40, 0.05)',
+                        fontFamily: '"Outfit", sans-serif',
+                        textAlign: 'left',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => (e.target.style.backgroundColor = '#FAF7F2')}
+                      onMouseLeave={(e) => (e.target.style.backgroundColor = '#ffffff')}
+                    >
+                      <div style={{ fontWeight: 600, color: '#1e140f' }}>{sug.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#8c7d75', marginTop: '2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {sug.display_name}
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="form-group" style={{ marginBottom: '28px' }}>
             <label
