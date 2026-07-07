@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useCart } from '../context/CartContext';
@@ -228,6 +228,50 @@ export default function FBOrderView() {
       setMapError('Could not resolve pin address. Please type it manually.');
     }
   };
+
+  const geocodeTimeoutRef = useRef(null);
+
+  const forwardGeocode = async (queryAddress) => {
+    if (!queryAddress || queryAddress.trim().length < 6) return;
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1`,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'JemraldFoodhouse/1.0',
+          },
+        }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setCoords([parseFloat(lat), parseFloat(lon)]);
+        setMapError('');
+      }
+    } catch (err) {
+      console.error('Forward geocoding error:', err);
+    }
+  };
+
+  const handleAddressChange = (val) => {
+    setAddress(val);
+    if (geocodeTimeoutRef.current) {
+      clearTimeout(geocodeTimeoutRef.current);
+    }
+    geocodeTimeoutRef.current = setTimeout(() => {
+      forwardGeocode(val);
+    }, 1200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (geocodeTimeoutRef.current) {
+        clearTimeout(geocodeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -2198,7 +2242,7 @@ export default function FBOrderView() {
             <textarea
               id="fb-address"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => handleAddressChange(e.target.value)}
               placeholder="House #, Street, Barangay"
               rows="3"
               style={{
