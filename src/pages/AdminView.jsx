@@ -24,6 +24,8 @@ import {
   Truck,
   PartyPopper,
   AlertTriangle,
+  MapPin,
+  Navigation,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContext';
@@ -33,6 +35,46 @@ import MenuModal from '../components/MenuModal';
 import IngredientModal from '../components/IngredientModal';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 import { restoreIngredients } from '../lib/inventoryHelpers';
+
+// Leaflet imports and CSS
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Custom Leaflet marker icon using the maroon theme color (#993C1D)
+const getCustomIcon = () => {
+  if (typeof window === 'undefined' || !L) return null;
+  return L.divIcon({
+    className: 'custom-pin-icon',
+    html: `<svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.35));">
+      <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#993C1D"/>
+    </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+  });
+};
+
+// Parse coordinates from notes field [LOC: lat,lng]
+const parseLocationFromNotes = (notes) => {
+  if (!notes) return null;
+  const match = notes.match(/\[LOC:\s*([-\d.]+),\s*([-\d.]+)\]/);
+  if (match) {
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[2]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+  return null;
+};
+
+// Retrieve coordinates from order object
+const getOrderCoords = (order) => {
+  if (order.latitude !== undefined && order.latitude !== null) {
+    return { lat: parseFloat(order.latitude), lng: parseFloat(order.longitude) };
+  }
+  return parseLocationFromNotes(order.notes);
+};
 
 export default function AdminView() {
   const { user } = useAuth();
@@ -1633,6 +1675,9 @@ const ADMIN_STATUS_INDEX = {
 };
 
 function AdminOrderCard({ order, formatDate, onViewDetails, onStatusChange }) {
+  const [showLocation, setShowLocation] = useState(false);
+  const coords = getOrderCoords(order);
+
   const isCancelled = order.status === 'cancelled';
   const isDelivered = order.status === 'delivered';
   const currentStep = ADMIN_STATUS_INDEX[order.status] ?? 0;
@@ -1854,6 +1899,131 @@ function AdminOrderCard({ order, formatDate, onViewDetails, onStatusChange }) {
         </div>
       )}
 
+      {/* Location Map View */}
+      {showLocation && (
+        <div
+          style={{
+            padding: '20px',
+            borderTop: '1px solid var(--border)',
+            background: 'rgba(45, 42, 38, 0.015)',
+          }}
+        >
+          {coords ? (
+            <div>
+              {/* Leaflet Map */}
+              <div
+                style={{
+                  height: '200px',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border)',
+                  marginBottom: '10px',
+                  position: 'relative',
+                  zIndex: 1,
+                }}
+              >
+                <MapContainer
+                  center={[coords.lat, coords.lng]}
+                  zoom={15}
+                  style={{ height: '100%', width: '100%' }}
+                  scrollWheelZoom={false}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <Marker
+                    position={[coords.lat, coords.lng]}
+                    icon={getCustomIcon()}
+                  />
+                </MapContainer>
+              </div>
+
+              {/* Caption details and Google Maps directions button */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      color: 'var(--muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.8px',
+                      marginBottom: '2px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Customer Address
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--cream)', lineHeight: 1.4 }}>
+                    {order.address || 'No address text.'}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: '4px' }}>
+                    Coords: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+                  </div>
+                </div>
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    background: '#993C1D',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    transition: 'opacity 0.2s',
+                    fontFamily: '"DM Sans", sans-serif',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <Navigation size={12} style={{ fill: 'currentColor' }} /> Directions
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div
+                style={{
+                  fontSize: '0.72rem',
+                  color: 'var(--muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.8px',
+                  marginBottom: '2px',
+                  fontWeight: 600,
+                }}
+              >
+                Customer Address
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--cream)', lineHeight: 1.4 }}>
+                {order.address || 'No address text.'}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#b8353e', marginTop: '6px', fontStyle: 'italic' }}>
+                * No map coordinates saved for this order.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div
         style={{
@@ -1907,24 +2077,48 @@ function AdminOrderCard({ order, formatDate, onViewDetails, onStatusChange }) {
             </button>
           )}
         </div>
-        <button
-          onClick={onViewDetails}
-          style={{
-            background: 'none',
-            border: '1px solid var(--border)',
-            color: 'var(--cream)',
-            padding: '8px 14px',
-            borderRadius: '6px',
-            fontSize: '0.72rem',
-            cursor: 'pointer',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            fontFamily: '"DM Sans", sans-serif',
-            transition: 'all 0.2s',
-          }}
-        >
-          View Details
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowLocation(!showLocation)}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border)',
+              color: 'var(--cream)',
+              padding: '8px 14px',
+              borderRadius: '6px',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontFamily: '"DM Sans", sans-serif',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <MapPin size={12} style={{ color: coords ? '#993C1D' : 'var(--muted)' }} />
+            {showLocation ? 'Hide Location' : 'View Location'}
+          </button>
+          <button
+            onClick={onViewDetails}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border)',
+              color: 'var(--cream)',
+              padding: '8px 14px',
+              borderRadius: '6px',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontFamily: '"DM Sans", sans-serif',
+              transition: 'all 0.2s',
+            }}
+          >
+            View Details
+          </button>
+        </div>
       </div>
     </motion.div>
   );

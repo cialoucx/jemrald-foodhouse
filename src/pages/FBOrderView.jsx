@@ -18,18 +18,27 @@ import {
   Upload,
   ImageIcon,
   X,
+  XCircle,
   Search,
   ArrowRight,
+  MapPin,
+  Navigation,
+  Compass,
+  Tag,
+  Flame,
+  Leaf,
+  CircleDot,
+  User,
+  PlusCircle,
+  Soup,
+  Sparkles,
 } from 'lucide-react';
-import {
-  AllIconSmall,
-  SushiIconSmall,
-  RiceIconSmall,
-  SaladIconSmall,
-  TakoyakiIconSmall,
-  AddOnsIconSmall,
-} from '../components/JapaneseIcons';
 import { deductIngredients, validateCartStock, checkAvailability } from '../lib/inventoryHelpers';
+
+// Leaflet imports and CSS
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const STATUS_STEPS = [
   {
@@ -58,9 +67,53 @@ const STATUS_STEPS = [
   },
 ];
 
+// Default service area coordinates (Metro Manila)
+const DEFAULT_CENTER = [14.5995, 120.9842];
+
+// Custom Leaflet marker icon using the rich brown theme color (#C62839)
+const getCustomIcon = () => {
+  if (typeof window === 'undefined' || !L) return null;
+  return L.divIcon({
+    className: 'custom-pin-icon',
+    html: `<svg width="30" height="42" viewBox="0 0 30 42" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.35));">
+      <path d="M15 0C6.71573 0 0 6.71573 0 15C0 26.25 15 42 15 42C15 42 30 26.25 30 15C30 6.71573 23.2843 0 15 0ZM15 20.25C12.1005 20.25 9.75 17.8995 9.75 15C9.75 12.1005 12.1005 9.75 15 9.75C17.8995 9.75 20.25 12.1005 20.25 15C20.25 17.8995 17.8995 20.25 15 20.25Z" fill="#C62839"/>
+    </svg>`,
+    iconSize: [30, 42],
+    iconAnchor: [15, 42],
+  });
+};
+
+// Map click handler component
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({
+    click(e) {
+      onMapClick([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
+// Programmatic map center updating component
+function ChangeView({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, 16);
+    }
+  }, [center, map]);
+  return null;
+}
+
 export default function FBOrderView() {
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.body.style.backgroundColor = '#FAF7F2';
+    return () => {
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
   const { cart, cartTotal, cartCount, changeQty, clearCart } = useCart();
 
   const [view, setView] = useState('landing'); // 'landing', 'menu', 'checkout', 'success'
@@ -78,10 +131,17 @@ export default function FBOrderView() {
   const [payment, setPayment] = useState(null);
   const [gcashRef, setGcashRef] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [error, setError] = useState('');
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+
+  // Map Pin Geolocation & Geocoding State
+  const [coords, setCoords] = useState(DEFAULT_CENTER);
+  const [mapError, setMapError] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
 
   // Schedule for Later
   const [isScheduled, setIsScheduled] = useState(false);
@@ -111,6 +171,63 @@ export default function FBOrderView() {
     '7:00 PM',
     '8:00 PM',
   ];
+
+  // Geolocation wrapper
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setMapError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setIsLocating(true);
+    setMapError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newCoords = [latitude, longitude];
+        setCoords(newCoords);
+        reverseGeocode(latitude, longitude);
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setMapError('Location permission denied. Please search or pin your address manually.');
+        } else {
+          setMapError('Could not retrieve your location. Please pin manually.');
+        }
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Reverse Geocoding via Nominatim
+  const reverseGeocode = async (lat, lng) => {
+    setMapError('');
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'JemraldFoodhouse/1.0',
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error('Failed to fetch address from geocoding service.');
+      }
+      const data = await response.json();
+      if (data && data.display_name) {
+        setAddress(data.display_name);
+      } else {
+        setMapError('Address details not found for this point.');
+      }
+    } catch (err) {
+      console.error('Reverse-geocoding error:', err);
+      setMapError('Could not resolve pin address. Please type it manually.');
+    }
+  };
 
   useEffect(() => {
     async function init() {
@@ -326,7 +443,11 @@ export default function FBOrderView() {
           filter: `id=eq.${placedOrder.id}`,
         },
         (payload) => {
-          setPlacedOrder(payload.new);
+          setPlacedOrder((prev) => ({
+            ...payload.new,
+            latitude: prev?.latitude,
+            longitude: prev?.longitude,
+          }));
         }
       )
       .subscribe();
@@ -345,6 +466,10 @@ export default function FBOrderView() {
   const handlePlaceOrder = async () => {
     if (!name || !phone || !address) {
       setError('Please provide your name, phone, and delivery address.');
+      return;
+    }
+    if (phone.length !== 11) {
+      setError('Phone number must be exactly 11 digits (e.g. 09123456789).');
       return;
     }
     if (!payment) {
@@ -398,14 +523,20 @@ export default function FBOrderView() {
         setUploadingReceipt(false);
       }
 
+      let dbNotes = notes || null;
+      if (isScheduled) {
+        dbNotes = `[SCHEDULED: ${scheduleDate} at ${scheduleTime}]${notes ? ' — ' + notes : ''}`;
+      }
+      if (coords) {
+        dbNotes = `${dbNotes ? dbNotes + ' ' : ''}[LOC: ${coords[0].toFixed(6)},${coords[1].toFixed(6)}]`;
+      }
+
       const orderPayload = {
         id: orderNum,
         user_name: name,
         phone,
         address,
-        notes: isScheduled
-          ? `[SCHEDULED: ${scheduleDate} at ${scheduleTime}]${notes ? ' — ' + notes : ''}`
-          : notes || null,
+        notes: dbNotes,
         payment,
         gcash_ref: gcashRef || null,
         gcash_receipt_url: receiptUrl,
@@ -446,7 +577,11 @@ export default function FBOrderView() {
         console.error('Ingredient deduction failed:', invErr);
       }
 
-      const finalOrder = savedOrder || orderPayload;
+      const finalOrder = {
+        ...(savedOrder || orderPayload),
+        latitude: coords ? coords[0] : null,
+        longitude: coords ? coords[1] : null,
+      };
       setPlacedOrder(finalOrder);
       localStorage.setItem('fb_active_order', finalOrder.id);
 
@@ -475,6 +610,26 @@ export default function FBOrderView() {
     }
   };
 
+  const handleCancelOrder = async () => {
+    setIsCancelling(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', placedOrder.id)
+        .select()
+        .single();
+      if (error) throw error;
+      setPlacedOrder(data);
+      setShowCancelModal(false);
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+      alert('Failed to cancel order: ' + err.message);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   if (view === 'success' && placedOrder) {
     const isCancelled = placedOrder.status === 'cancelled';
     const currentStepIdx = isCancelled
@@ -490,24 +645,28 @@ export default function FBOrderView() {
         className="fb-order-container"
         style={{
           minHeight: '100vh',
-          padding: '40px 20px',
+          padding: '40px 24px',
           display: 'flex',
           flexDirection: 'column',
+          background: '#FAF7F2',
+          fontFamily: '"Outfit", sans-serif',
         }}
       >
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <CheckCircle2 size={48} style={{ color: 'var(--secondary)', margin: '0 auto 16px' }} />
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <CheckCircle2 size={48} style={{ color: '#C62839', margin: '0 auto 16px' }} />
           <h2
             style={{
-              fontFamily: '"Playfair Display", serif',
+              fontFamily: '"Outfit", sans-serif',
               fontSize: '1.8rem',
+              fontWeight: 700,
               margin: '0 0 8px 0',
-              color: 'var(--cream)',
+              color: '#C62839',
+              letterSpacing: '-0.3px',
             }}
           >
             Order #{placedOrder.id}
           </h2>
-          <p style={{ color: 'var(--muted)', margin: 0, fontSize: '0.9rem' }}>
+          <p style={{ color: '#8c7d75', margin: 0, fontSize: '0.92rem', fontWeight: 500 }}>
             Thanks, {placedOrder.user_name}! Keep this page open to track your food.
           </p>
           {placedOrder.scheduled_date && (
@@ -515,17 +674,17 @@ export default function FBOrderView() {
               style={{
                 marginTop: '16px',
                 padding: '12px 16px',
-                borderRadius: '10px',
-                background: 'rgba(154, 174, 71, 0.1)',
-                border: '1px solid rgba(154, 174, 71, 0.25)',
+                borderRadius: '16px',
+                background: 'rgba(198, 40, 57, 0.05)',
+                border: '1px solid rgba(198, 40, 57, 0.12)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
                 justifyContent: 'center',
               }}
             >
-              <CalendarClock size={18} style={{ color: 'var(--red-bright)' }} />
-              <span style={{ color: 'var(--cream)', fontSize: '0.85rem', fontWeight: 500 }}>
+              <CalendarClock size={18} style={{ color: '#C62839' }} />
+              <span style={{ color: '#C62839', fontSize: '0.85rem', fontWeight: 600 }}>
                 Scheduled for{' '}
                 {new Date(placedOrder.scheduled_date).toLocaleDateString('en-US', {
                   weekday: 'short',
@@ -541,26 +700,28 @@ export default function FBOrderView() {
         {isCancelled ? (
           <div
             style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
+              background: '#ffffff',
+              borderRadius: '16px',
               padding: '24px',
               textAlign: 'center',
+              boxShadow: '0 4px 20px rgba(198, 40, 57, 0.03)',
+              border: '1.5px solid rgba(239, 68, 68, 0.15)',
+              marginBottom: '32px',
             }}
           >
-            <p
-              style={{ color: 'var(--red-bright)', fontWeight: 600, fontSize: '1.1rem', margin: 0 }}
-            >
+            <XCircle size={36} style={{ color: '#ef4444', margin: '0 auto 12px' }} />
+            <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '1.05rem', margin: 0 }}>
               This order has been cancelled.
             </p>
           </div>
         ) : (
           <div
             style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
+              background: '#ffffff',
               borderRadius: '16px',
               padding: '24px',
+              boxShadow: '0 4px 20px rgba(198, 40, 57, 0.03)',
+              marginBottom: '32px',
             }}
           >
             {/* Progress Bar */}
@@ -571,15 +732,15 @@ export default function FBOrderView() {
               aria-valuemax={100}
               aria-label="Order progress"
               style={{
-                background: 'var(--border)',
+                background: 'rgba(198, 40, 57, 0.08)',
                 borderRadius: '999px',
-                height: '4px',
+                height: '6px',
                 marginBottom: '30px',
                 overflow: 'hidden',
               }}
             >
               <motion.div
-                style={{ height: '100%', background: 'var(--secondary)', borderRadius: '999px' }}
+                style={{ height: '100%', background: '#C62839', borderRadius: '999px' }}
                 initial={{ width: '0%' }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -606,15 +767,15 @@ export default function FBOrderView() {
                           justifyContent: 'center',
                           flexShrink: 0,
                           background: isDone
-                            ? 'rgba(154, 174, 71, 0.15)'
+                            ? 'rgba(198, 40, 57, 0.08)'
                             : isActive
-                              ? 'var(--surface)'
-                              : 'var(--surface2)',
+                              ? 'rgba(198, 40, 57, 0.04)'
+                              : '#ffffff',
                           border: isActive
-                            ? '2px solid var(--red-bright)'
+                            ? '2px solid #C62839'
                             : isDone
-                              ? '2px solid var(--secondary)'
-                              : '2px solid var(--border)',
+                              ? '2px solid #C62839'
+                              : '2px solid rgba(198, 40, 57, 0.12)',
                         }}
                         animate={isActive ? { scale: [1, 1.1, 1] } : { scale: 1 }}
                         transition={
@@ -622,11 +783,11 @@ export default function FBOrderView() {
                         }
                       >
                         {isDone ? (
-                          <CheckCircle2 size={18} style={{ color: 'var(--secondary)' }} />
+                          <CheckCircle2 size={18} style={{ color: '#C62839' }} />
                         ) : (
                           <step.IconComponent
                             size={18}
-                            style={{ color: isActive ? 'var(--red-bright)' : 'var(--muted)' }}
+                            style={{ color: isActive ? '#C62839' : '#8c7d75' }}
                           />
                         )}
                       </motion.div>
@@ -636,7 +797,7 @@ export default function FBOrderView() {
                             width: '2px',
                             height: '100%',
                             minHeight: '30px',
-                            background: isDone ? 'var(--secondary)' : 'var(--border)',
+                            background: isDone ? '#C62839' : 'rgba(198, 40, 57, 0.12)',
                             margin: '4px 0',
                           }}
                         />
@@ -653,15 +814,15 @@ export default function FBOrderView() {
                           fontWeight: 600,
                           margin: '0 0 2px 0',
                           color: isActive
-                            ? 'var(--red-bright)'
+                            ? '#C62839'
                             : isDone
-                              ? 'var(--secondary)'
-                              : 'var(--muted)',
+                              ? '#C62839'
+                              : '#8c7d75',
                         }}
                       >
                         {step.label}
                       </p>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: 0 }}>
+                      <p style={{ fontSize: '0.8rem', color: '#8c7d75', margin: 0 }}>
                         {step.subtitle}
                       </p>
                     </motion.div>
@@ -673,19 +834,47 @@ export default function FBOrderView() {
         )}
 
         <div style={{ display: 'flex', gap: '12px', marginTop: 'auto', flexDirection: 'column' }}>
+          {placedOrder.status === 'pending' && (
+            <button
+              onClick={() => setShowCancelModal(true)}
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                background: '#ffffff',
+                border: '1.5px solid #ef4444',
+                color: '#ef4444',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontFamily: '"Outfit", sans-serif',
+                width: '100%',
+                fontSize: '0.9rem',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = '#fef2f2')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = '#ffffff')}
+            >
+              Cancel Order
+            </button>
+          )}
+
           <button
-            className="btn-cancel"
             onClick={() => (window.location.href = 'https://m.me/jemraldfoodhouse')}
             style={{
               padding: '16px',
-              borderRadius: '8px',
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              color: 'var(--cream)',
+              borderRadius: '16px',
+              background: '#C62839',
+              border: 'none',
+              color: '#ffffff',
               cursor: 'pointer',
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: '"Outfit", sans-serif',
               width: '100%',
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              boxShadow: '0 4px 12px rgba(198, 40, 57, 0.2)',
+              transition: 'background-color 0.2s',
             }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = '#8c3a1d')}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = '#C62839')}
           >
             Return to Messenger
           </button>
@@ -698,19 +887,125 @@ export default function FBOrderView() {
             }}
             style={{
               padding: '16px',
-              borderRadius: '8px',
+              borderRadius: '16px',
               background: 'transparent',
-              border: '1px solid var(--border)',
-              color: 'var(--muted)',
+              border: '1.5px solid rgba(198, 40, 57, 0.15)',
+              color: '#8c7d75',
               cursor: 'pointer',
-              fontFamily: '"DM Sans", sans-serif',
+              fontFamily: '"Outfit", sans-serif',
               width: '100%',
-              fontSize: '0.85rem',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              transition: 'background-color 0.2s',
             }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = 'rgba(198, 40, 57, 0.02)')}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
           >
             Place Another Order
           </button>
         </div>
+
+        {/* Custom Confirmation Modal */}
+        <AnimatePresence>
+          {showCancelModal && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowCancelModal(false)}
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  zIndex: 1000,
+                }}
+              />
+              {/* Modal Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                style={{
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  x: '-50%',
+                  y: '-50%',
+                  width: '90%',
+                  maxWidth: '340px',
+                  background: '#ffffff',
+                  borderRadius: '24px',
+                  padding: '24px',
+                  zIndex: 1001,
+                  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12)',
+                  textAlign: 'center',
+                  fontFamily: '"Outfit", sans-serif',
+                }}
+              >
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '50%',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px auto',
+                  }}
+                >
+                  <XCircle size={28} style={{ color: '#ef4444' }} />
+                </div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1e140f', margin: '0 0 8px 0' }}>
+                  Cancel Order?
+                </h3>
+                <p style={{ fontSize: '0.92rem', color: '#8c7d75', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+                  Are you sure you want to cancel this order? This action cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={() => setShowCancelModal(false)}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#ffffff',
+                      border: '1.5px solid rgba(198, 40, 57, 0.15)',
+                      color: '#8c7d75',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: '"Outfit", sans-serif',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    No, Keep
+                  </button>
+                  <button
+                    onClick={handleCancelOrder}
+                    disabled={isCancelling}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: '#ef4444',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: '"Outfit", sans-serif',
+                      fontSize: '0.9rem',
+                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+                    }}
+                  >
+                    {isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -725,46 +1020,10 @@ export default function FBOrderView() {
           flexDirection: 'column',
           position: 'relative',
           overflow: 'hidden',
-          background: 'var(--bg)',
+          background: '#FAF7F2', // Uniform background color matching the menu page
         }}
       >
-        {/* Animated Background Rings */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: 0.5,
-            pointerEvents: 'none',
-          }}
-        >
-          <motion.div
-            style={{
-              position: 'absolute',
-              width: '280px',
-              height: '280px',
-              borderRadius: '50%',
-              border: '1px solid rgba(211, 18, 27, 0.15)',
-            }}
-            animate={{ scale: [1, 1.05, 1], rotate: 360 }}
-            transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-          />
-          <motion.div
-            style={{
-              position: 'absolute',
-              width: '480px',
-              height: '480px',
-              borderRadius: '50%',
-              border: '1px solid rgba(211, 18, 27, 0.08)',
-            }}
-            animate={{ scale: [1.05, 1, 1.05], rotate: -360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-          />
-        </div>
-
-        {/* Content */}
+        {/* Content Centered Vertically */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -775,43 +1034,44 @@ export default function FBOrderView() {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '40px 20px',
+            padding: '60px 20px',
             zIndex: 1,
             textAlign: 'center',
           }}
         >
-          <div
+          {/* Brand Torii Gate Logo - Larger & Animated */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15, duration: 0.6, ease: 'easeOut' }}
             style={{
-              width: '80px',
-              height: '80px',
-              background: 'var(--red)',
-              borderRadius: '24px',
+              width: '240px',
+              height: '240px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '24px',
-              boxShadow: '0 10px 25px rgba(211, 18, 27, 0.4)',
+              marginBottom: '36px',
             }}
           >
-            <span
+            <img
+              src="/images/logo-torii.png"
+              alt="JR Foodhouse Logo"
               style={{
-                fontFamily: '"Playfair Display", serif',
-                fontSize: '2.5rem',
-                color: '#fff',
-                fontWeight: 800,
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
               }}
-            >
-              J
-            </span>
-          </div>
+            />
+          </motion.div>
 
           <h1
             style={{
               fontFamily: '"Playfair Display", serif',
-              fontSize: '2.2rem',
-              color: 'var(--cream)',
-              margin: '0 0 16px 0',
-              lineHeight: 1.2,
+              fontSize: '2.8rem',
+              color: '#2E2A28', // Deep premium charcoal text
+              margin: '0 0 20px 0',
+              lineHeight: 1.15,
+              fontWeight: 800,
             }}
           >
             Authentic Flavors,
@@ -821,34 +1081,38 @@ export default function FBOrderView() {
 
           <p
             style={{
-              color: 'var(--muted)',
-              fontSize: '1rem',
-              margin: '0 0 40px 0',
-              maxWidth: '300px',
+              color: '#74695E', // Muted secondary brown/gray
+              fontSize: '1.05rem',
+              margin: '0 0 44px 0',
+              maxWidth: '320px',
               lineHeight: 1.5,
+              fontWeight: 400,
             }}
           >
-            Craving something special? Order from Jemrald Foodhouse straight through Messenger.
+            Craving something special?<br />
+            Order authentic Japanese favorites<br />
+            straight through Messenger.
           </p>
 
           <motion.button
-            whileHover={{ scale: 1.05 }}
+            whileHover={{ scale: 1.05, backgroundColor: '#A81F31' }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setView('menu')}
             style={{
-              background: 'var(--red)',
+              background: '#C62839', // Unified Brand Torii Red Accent Button
               border: 'none',
               color: '#fff',
               fontFamily: '"DM Sans", sans-serif',
-              fontSize: '1rem',
+              fontSize: '1.05rem',
               fontWeight: 600,
-              padding: '16px 40px',
-              borderRadius: '30px',
+              padding: '18px 48px',
+              borderRadius: '36px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              boxShadow: '0 8px 20px rgba(211, 18, 27, 0.3)',
+              boxShadow: '0 8px 24px rgba(198, 40, 57, 0.25)',
+              transition: 'background-color 0.2s ease',
             }}
           >
             Order Now <ArrowRight size={18} />
@@ -862,17 +1126,18 @@ export default function FBOrderView() {
     <div
       className="fb-order-container"
       style={{
-        paddingBottom: cartCount > 0 ? '80px' : '20px',
+        paddingBottom: cartCount > 0 ? '90px' : '24px',
         minHeight: '100vh',
-        background: view === 'menu' ? '#f9f9f9' : 'var(--bg)',
+        background: '#FAF7F2',
+        fontFamily: '"Outfit", sans-serif',
       }}
     >
-      {/* Minimal Header */}
+      {/* Premium Minimal Header */}
       <div
         style={{
-          background: view === 'menu' ? '#ffffff' : 'var(--nav-bg)',
-          padding: '16px 20px',
-          borderBottom: view === 'menu' ? '1px solid #e2e8f0' : '1px solid var(--border)',
+          background: '#FAF7F2',
+          padding: '20px 24px',
+          borderBottom: '1px solid rgba(198, 40, 57, 0.06)',
           position: 'sticky',
           top: 0,
           zIndex: 50,
@@ -888,7 +1153,7 @@ export default function FBOrderView() {
             style={{
               position: 'absolute',
               left: '16px',
-              color: 'var(--cream)',
+              color: '#C62839',
               cursor: 'pointer',
               background: 'none',
               border: 'none',
@@ -897,15 +1162,16 @@ export default function FBOrderView() {
               alignItems: 'center',
             }}
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={22} />
           </button>
         )}
         <div
           style={{
-            fontFamily: '"Playfair Display", serif',
-            fontSize: '1.2rem',
-            color: view === 'menu' ? '#0f172a' : 'var(--red-bright)',
+            fontFamily: '"Outfit", sans-serif',
+            fontSize: '1.25rem',
+            color: '#C62839',
             fontWeight: 700,
+            letterSpacing: '-0.3px',
           }}
         >
           {view === 'menu' ? 'Jemrald Menu' : 'Checkout'}
@@ -913,7 +1179,7 @@ export default function FBOrderView() {
       </div>
 
       {view === 'menu' ? (
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '20px', paddingBottom: cartCount > 0 ? '90px' : '20px' }}>
           {loading ? (
             <div
               style={{ textAlign: 'center', color: 'var(--muted)', marginTop: '40px' }}
@@ -924,80 +1190,100 @@ export default function FBOrderView() {
           ) : (
             <>
               {/* Search Bar */}
-              <div style={{ marginBottom: '16px', position: 'relative' }}>
-                <Search
-                  size={18}
+              <div style={{ marginBottom: '24px' }}>
+                <label
+                  htmlFor="fb-menu-search"
                   style={{
-                    position: 'absolute',
-                    left: '14px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: view === 'menu' ? '#94a3b8' : 'var(--muted)',
-                    pointerEvents: 'none',
+                    display: 'block',
+                    fontSize: '0.8rem',
+                    color: '#8c7d75',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                    fontFamily: '"Outfit", sans-serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                   }}
-                />
-                <motion.input
-                  type="text"
-                  placeholder="Search menu items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  whileFocus={{ scale: 1.01, boxShadow: view === 'menu' ? '0 0 0 2px rgba(0, 138, 75, 0.15)' : '0 0 0 2px rgba(211, 18, 27, 0.2)' }}
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px 12px 42px',
-                    background: view === 'menu' ? '#ffffff' : 'var(--surface2)',
-                    border: view === 'menu' ? '1px solid #e2e8f0' : '1px solid var(--border)',
-                    borderRadius: '12px',
-                    color: view === 'menu' ? '#0f172a' : 'var(--cream)',
-                    fontSize: '0.9rem',
-                    outline: 'none',
-                    fontFamily: '"DM Sans", sans-serif',
-                    transition: 'border-color 0.2s',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = view === 'menu' ? '#008a4b' : 'var(--red-bright)')}
-                  onBlur={(e) => (e.target.style.borderColor = view === 'menu' ? '#e2e8f0' : 'var(--border)')}
-                />
-                <AnimatePresence>
-                  {searchQuery && (
-                    <motion.button
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.5 }}
-                      whileHover={{ scale: 1.1, backgroundColor: 'var(--border)' }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setSearchQuery('')}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        marginTop: '-11px',
-                        background: view === 'menu' ? '#e2e8f0' : 'var(--surface)',
-                        border: 'none',
-                        color: view === 'menu' ? '#64748b' : 'var(--muted)',
-                        cursor: 'pointer',
-                        borderRadius: '50%',
-                        width: '22px',
-                        height: '22px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        lineHeight: 1,
-                      }}
-                    >
-                      ✕
-                    </motion.button>
-                  )}
-                </AnimatePresence>
+                >
+                  Search Menu
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Search
+                    size={18}
+                    style={{
+                      position: 'absolute',
+                      left: '16px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#C62839',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <motion.input
+                    id="fb-menu-search"
+                    name="search"
+                    type="text"
+                    placeholder="Search menu items..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    whileFocus={{ scale: 1.01, boxShadow: '0 0 0 3px rgba(198, 40, 57, 0.08)' }}
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px 14px 46px',
+                      background: '#ffffff',
+                      border: '1px solid rgba(198, 40, 57, 0.15)',
+                      borderRadius: '16px',
+                      color: '#1e140f',
+                      fontSize: '0.92rem',
+                      outline: 'none',
+                      fontFamily: '"Outfit", sans-serif',
+                      transition: 'border-color 0.2s, box-shadow 0.2s',
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = '#C62839')}
+                    onBlur={(e) => (e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)')}
+                  />
+                  <AnimatePresence>
+                    {searchQuery && (
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        whileHover={{ scale: 1.1, backgroundColor: 'rgba(198, 40, 57, 0.08)' }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setSearchQuery('')}
+                        style={{
+                          position: 'absolute',
+                          right: '16px',
+                          top: '50%',
+                          marginTop: '-11px',
+                          background: 'rgba(198, 40, 57, 0.05)',
+                          border: 'none',
+                          color: '#C62839',
+                          cursor: 'pointer',
+                          borderRadius: '50%',
+                          width: '22px',
+                          height: '22px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px',
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✕
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               <div
                 style={{
                   display: 'flex',
                   gap: '8px',
-                  marginBottom: '20px',
+                  marginBottom: '24px',
                   overflowX: 'auto',
-                  paddingBottom: '4px',
+                  paddingBottom: '8px',
+                  scrollbarWidth: 'none',
                 }}
               >
                 {[
@@ -1021,51 +1307,36 @@ export default function FBOrderView() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      padding: '12px 16px',
-                      borderRadius: '999px',
+                      gap: '8px',
+                      padding: '10px 16px',
+                      borderRadius: '16px',
                       cursor: 'pointer',
-                      border: '1px solid var(--border)',
-                      background: view === 'menu' ? '#ffffff' : 'var(--surface2)',
-                      color: view === 'menu'
-                        ? (filter === cat ? '#008a4b' : '#64748b')
-                        : (filter === cat ? 'var(--cream)' : 'var(--muted)'),
-                      fontSize: '0.8rem',
-                      fontWeight: 500,
+                      border: '1.5px solid rgba(198, 40, 57, 0.12)',
+                      background: filter === cat ? 'rgba(198, 40, 57, 0.08)' : '#ffffff',
+                      color: filter === cat ? '#C62839' : '#8c7d75',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
                       whiteSpace: 'nowrap',
-                      transition: 'color 0.2s, border-color 0.2s',
-                      fontFamily: '"DM Sans", sans-serif',
-                      minHeight: '44px',
+                      transition: 'all 0.2s ease',
+                      fontFamily: '"Outfit", sans-serif',
+                      minHeight: '40px',
                       position: 'relative',
                       zIndex: 1,
-                      borderColor: view === 'menu'
-                        ? (filter === cat ? '#008a4b' : '#e2e8f0')
-                        : (filter === cat ? 'var(--red-bright)' : 'var(--border)'),
+                      borderColor: filter === cat ? '#C62839' : 'rgba(198, 40, 57, 0.12)',
+                      boxShadow: filter === cat ? 'none' : '0 2px 6px rgba(198, 40, 57, 0.02)',
                     }}
                   >
-                    {filter === cat && (
-                      <motion.div
-                        layoutId="activeFilterFB"
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          borderRadius: '999px',
-                          background: view === 'menu' ? 'rgba(0, 138, 75, 0.12)' : 'rgba(154, 174, 71, 0.2)',
-                          zIndex: -1,
-                        }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                      />
-                    )}
-                    {cat === 'all' && <AllIconSmall size={16} color="currentColor" />}
-                    {cat === 'promo' && <span style={{ fontSize: '14px' }}>🏷️</span>}
-                    {cat === 'sushi' && <SushiIconSmall size={16} color="currentColor" />}
-                    {cat === 'baked-sushi' && <SushiIconSmall size={16} color="currentColor" />}
-                    {cat === 'kimbap' && <SushiIconSmall size={16} color="currentColor" />}
-                    {cat === 'solo' && <SushiIconSmall size={16} color="currentColor" />}
-                    {cat === 'salad' && <SaladIconSmall size={16} color="currentColor" />}
-                    {cat === 'takoyaki' && <TakoyakiIconSmall size={16} color="currentColor" />}
-                    {cat === 'add-ons' && <AddOnsIconSmall size={16} />}
-                    {cat === 'rice' && <RiceIconSmall size={16} color="currentColor" />}
+                    {cat === 'all' && <Compass size={15} color="currentColor" />}
+                    {cat === 'promo' && <Tag size={15} color="currentColor" />}
+                    {cat === 'sushi' && <Sparkles size={15} color="currentColor" />}
+                    {cat === 'baked-sushi' && <Flame size={15} color="currentColor" />}
+                    {cat === 'kimbap' && <CircleDot size={15} color="currentColor" />}
+                    {cat === 'solo' && <User size={15} color="currentColor" />}
+                    {cat === 'salad' && <Leaf size={15} color="currentColor" />}
+                    {cat === 'takoyaki' && <CircleDot size={15} color="currentColor" />}
+                    {cat === 'add-ons' && <PlusCircle size={15} color="currentColor" />}
+                    {cat === 'rice' && <Soup size={15} color="currentColor" />}
+                    
                     {cat === 'add-ons'
                       ? 'Add-ons'
                       : cat === 'promo'
@@ -1107,14 +1378,14 @@ export default function FBOrderView() {
 
           <div
             style={{
-              background: 'var(--surface2)',
-              borderRadius: '12px',
-              padding: '16px',
-              border: '1px solid var(--border)',
+              background: '#ffffff',
+              borderRadius: '16px',
+              padding: '20px',
+              boxShadow: '0 4px 20px rgba(198, 40, 57, 0.03), 0 1px 3px rgba(0, 0, 0, 0.01)',
               marginBottom: '24px',
             }}
           >
-            <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--cream)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '16px', color: '#1e140f', fontFamily: '"Outfit", sans-serif', letterSpacing: '-0.2px' }}>
               Order Summary
             </h3>
             {cart.map((c) => (
@@ -1129,20 +1400,20 @@ export default function FBOrderView() {
                 }}
               >
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', paddingRight: '12px' }}>
-                  <span style={{ color: 'var(--cream)', fontWeight: 500 }}>{c.name}</span>
-                  <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>₱{(c.price * c.qty).toFixed(2)}</span>
+                  <span style={{ color: '#1e140f', fontWeight: 600, fontFamily: '"Outfit", sans-serif' }}>{c.name}</span>
+                  <span style={{ color: '#8c7d75', fontSize: '0.8rem', fontFamily: '"Outfit", sans-serif' }}>₱{(c.price * c.qty).toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
                     type="button"
                     onClick={() => changeQty(c.cartKey, -1)}
                     style={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--cream)',
+                      background: 'rgba(198, 40, 57, 0.06)',
+                      border: 'none',
+                      color: '#C62839',
                       width: '24px',
                       height: '24px',
-                      borderRadius: '6px',
+                      borderRadius: '50%',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1154,19 +1425,19 @@ export default function FBOrderView() {
                   >
                     &#8722;
                   </button>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700, minWidth: '18px', textAlign: 'center', color: 'var(--cream)' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, minWidth: '18px', textAlign: 'center', color: '#1e140f', fontFamily: '"Outfit", sans-serif' }}>
                     {c.qty}
                   </span>
                   <button
                     type="button"
                     onClick={() => changeQty(c.cartKey, 1)}
                     style={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--cream)',
+                      background: 'rgba(198, 40, 57, 0.06)',
+                      border: 'none',
+                      color: '#C62839',
                       width: '24px',
                       height: '24px',
-                      borderRadius: '6px',
+                      borderRadius: '50%',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -1183,7 +1454,7 @@ export default function FBOrderView() {
             ))}
             <div
               style={{
-                borderTop: '1px solid var(--border)',
+                borderTop: '1px solid rgba(198, 40, 57, 0.08)',
                 paddingTop: '12px',
                 marginTop: '12px',
                 display: 'flex',
@@ -1191,12 +1462,12 @@ export default function FBOrderView() {
                 fontWeight: 700,
               }}
             >
-              <span style={{ color: 'var(--cream)' }}>Total</span>
-              <span style={{ color: 'var(--red-bright)' }}>₱{cartTotal.toFixed(2)}</span>
+              <span style={{ color: '#1e140f', fontFamily: '"Outfit", sans-serif' }}>Total</span>
+              <span style={{ color: '#C62839', fontFamily: '"Outfit", sans-serif' }}>₱{cartTotal.toFixed(2)}</span>
             </div>
           </div>
 
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--cream)' }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: '#1e140f', fontFamily: '"Outfit", sans-serif', letterSpacing: '-0.2px' }}>
             Payment Method
           </h3>
           <div
@@ -1220,23 +1491,26 @@ export default function FBOrderView() {
               }}
               style={{
                 padding: '16px',
-                border: `1px solid ${payment === 'cash' ? 'var(--red-bright)' : 'var(--border)'}`,
-                borderRadius: '8px',
+                border: `1.5px solid ${payment === 'cash' ? '#C62839' : 'rgba(198, 40, 57, 0.12)'}`,
+                borderRadius: '16px',
                 textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all .2s',
-                background: payment === 'cash' ? 'rgba(154, 174, 71, 0.08)' : 'var(--surface2)',
-                color: 'var(--cream)',
+                background: payment === 'cash' ? 'rgba(198, 40, 57, 0.05)' : '#ffffff',
+                color: payment === 'cash' ? '#C62839' : '#8c7d75',
                 fontSize: '0.85rem',
+                fontWeight: 600,
                 minHeight: '44px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                fontFamily: '"Outfit", sans-serif',
+                boxShadow: payment === 'cash' ? 'none' : '0 2px 6px rgba(198, 40, 57, 0.02)',
               }}
             >
               <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
-                <Banknote size={28} style={{ color: 'var(--red-bright)' }} />
+                <Banknote size={24} style={{ color: payment === 'cash' ? '#C62839' : '#8c7d75' }} />
               </div>
               Cash on Delivery
             </div>
@@ -1253,23 +1527,26 @@ export default function FBOrderView() {
               }}
               style={{
                 padding: '16px',
-                border: `1px solid ${payment === 'gcash' ? 'var(--red-bright)' : 'var(--border)'}`,
-                borderRadius: '8px',
+                border: `1.5px solid ${payment === 'gcash' ? '#C62839' : 'rgba(198, 40, 57, 0.12)'}`,
+                borderRadius: '16px',
                 textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all .2s',
-                background: payment === 'gcash' ? 'rgba(154, 174, 71, 0.08)' : 'var(--surface2)',
-                color: 'var(--cream)',
+                background: payment === 'gcash' ? 'rgba(198, 40, 57, 0.05)' : '#ffffff',
+                color: payment === 'gcash' ? '#C62839' : '#8c7d75',
                 fontSize: '0.85rem',
+                fontWeight: 600,
                 minHeight: '44px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                fontFamily: '"Outfit", sans-serif',
+                boxShadow: payment === 'gcash' ? 'none' : '0 2px 6px rgba(198, 40, 57, 0.02)',
               }}
             >
               <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
-                <Smartphone size={28} style={{ color: 'var(--red-bright)' }} />
+                <Smartphone size={24} style={{ color: payment === 'gcash' ? '#C62839' : '#8c7d75' }} />
               </div>
               GCash
             </div>
@@ -1283,27 +1560,29 @@ export default function FBOrderView() {
             >
               <div
                 style={{
-                  background: 'rgba(154, 174, 71, 0.1)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
+                  background: '#ffffff',
+                  border: '1px solid rgba(198, 40, 57, 0.08)',
+                  borderRadius: '16px',
                   padding: '16px',
                   marginBottom: '16px',
                   textAlign: 'center',
+                  boxShadow: '0 4px 20px rgba(198, 40, 57, 0.03)',
                 }}
               >
-                <div style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: '4px' }}>
+                <div style={{ color: '#8c7d75', fontSize: '0.8rem', marginBottom: '4px', fontWeight: 500, fontFamily: '"Outfit", sans-serif' }}>
                   Send payment to
                 </div>
                 <div
                   style={{
-                    fontSize: '1.2rem',
-                    fontFamily: '"Playfair Display", serif',
-                    color: 'var(--red-bright)',
+                    fontSize: '1.25rem',
+                    fontFamily: '"Outfit", sans-serif',
+                    color: '#C62839',
+                    fontWeight: 700,
                   }}
                 >
                   0918 749 1194
                 </div>
-                <div style={{ color: 'var(--muted)', fontSize: '0.8rem', marginTop: '4px' }}>
+                <div style={{ color: '#8c7d75', fontSize: '0.8rem', marginTop: '4px', fontWeight: 500, fontFamily: '"Outfit", sans-serif' }}>
                   Jemrald F.
                 </div>
               </div>
@@ -1313,8 +1592,12 @@ export default function FBOrderView() {
                   style={{
                     display: 'block',
                     fontSize: '0.8rem',
-                    color: 'var(--muted)',
-                    marginBottom: '6px',
+                    color: '#8c7d75',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                    fontFamily: '"Outfit", sans-serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                   }}
                 >
                   GCash Reference No. *
@@ -1332,19 +1615,34 @@ export default function FBOrderView() {
                   maxLength={13}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    background: 'var(--surface)',
-                    border: `1px solid ${gcashRef && gcashRef.length === 13 ? '#22c55e' : 'var(--border)'}`,
-                    color: '#000',
-                    borderRadius: '8px',
+                    padding: '14px 16px',
+                    background: '#ffffff',
+                    border: `1px solid ${gcashRef && gcashRef.length === 13 ? '#22c55e' : 'rgba(198, 40, 57, 0.15)'}`,
+                    color: '#1e140f',
+                    borderRadius: '16px',
+                    fontSize: '0.92rem',
+                    outline: 'none',
+                    fontFamily: '"Outfit", sans-serif',
                     transition: 'border-color 0.2s',
+                  }}
+                  onFocus={(e) => {
+                    if (!(gcashRef && gcashRef.length === 13)) {
+                      e.target.style.borderColor = '#C62839';
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!(gcashRef && gcashRef.length === 13)) {
+                      e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)';
+                    }
                   }}
                 />
                 <div
                   style={{
-                    fontSize: '0.7rem',
+                    fontSize: '0.75rem',
                     marginTop: '4px',
-                    color: gcashRef.length === 13 ? '#22c55e' : 'var(--muted)',
+                    color: gcashRef.length === 13 ? '#22c55e' : '#8c7d75',
+                    fontFamily: '"Outfit", sans-serif',
+                    fontWeight: 500,
                   }}
                 >
                   {gcashRef.length}/13 digits {gcashRef.length === 13 && '✓'}
@@ -1355,8 +1653,12 @@ export default function FBOrderView() {
                   style={{
                     display: 'block',
                     fontSize: '0.8rem',
-                    color: 'var(--muted)',
-                    marginBottom: '6px',
+                    color: '#8c7d75',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                    fontFamily: '"Outfit", sans-serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
                   }}
                 >
                   Upload Receipt Screenshot *
@@ -1370,19 +1672,27 @@ export default function FBOrderView() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       padding: '24px',
-                      borderRadius: '8px',
+                      borderRadius: '16px',
                       cursor: 'pointer',
-                      border: '2px dashed var(--border)',
-                      background: 'var(--surface)',
-                      transition: 'border-color 0.2s',
+                      border: '2px dashed rgba(198, 40, 57, 0.25)',
+                      background: '#ffffff',
+                      transition: 'border-color 0.2s, background-color 0.2s',
                       gap: '8px',
                     }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#C62839';
+                      e.currentTarget.style.backgroundColor = 'rgba(198, 40, 57, 0.02)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(198, 40, 57, 0.25)';
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                    }}
                   >
-                    <Upload size={24} style={{ color: 'var(--muted)' }} />
-                    <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
+                    <Upload size={24} style={{ color: '#C62839' }} />
+                    <span style={{ fontSize: '0.85rem', color: '#C62839', fontWeight: 600, fontFamily: '"Outfit", sans-serif' }}>
                       Tap to upload receipt
                     </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--muted)', opacity: 0.6 }}>
+                    <span style={{ fontSize: '0.72rem', color: '#8c7d75', fontFamily: '"Outfit", sans-serif' }}>
                       JPG, PNG (max 5MB)
                     </span>
                     <input
@@ -1406,9 +1716,9 @@ export default function FBOrderView() {
                   <div
                     style={{
                       position: 'relative',
-                      borderRadius: '8px',
+                      borderRadius: '16px',
                       overflow: 'hidden',
-                      border: '1px solid var(--border)',
+                      border: '1px solid rgba(198, 40, 57, 0.15)',
                     }}
                   >
                     <img
@@ -1417,7 +1727,7 @@ export default function FBOrderView() {
                       style={{
                         width: '100%',
                         objectFit: 'contain',
-                        background: '#f5f5f5',
+                        background: '#FAF7F2',
                         display: 'block',
                       }}
                     />
@@ -1447,13 +1757,15 @@ export default function FBOrderView() {
                     </button>
                     <div
                       style={{
-                        padding: '8px 12px',
-                        background: 'rgba(34, 197, 94, 0.1)',
+                        padding: '10px 14px',
+                        background: 'rgba(34, 197, 94, 0.08)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        fontSize: '0.75rem',
+                        fontSize: '0.78rem',
                         color: '#22c55e',
+                        fontWeight: 600,
+                        fontFamily: '"Outfit", sans-serif',
                       }}
                     >
                       <ImageIcon size={14} /> Receipt uploaded ✓
@@ -1465,7 +1777,7 @@ export default function FBOrderView() {
           )}
 
           {/* Schedule for Later */}
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--cream)' }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: '#1e140f', fontFamily: '"Outfit", sans-serif', letterSpacing: '-0.2px' }}>
             When do you want it?
           </h3>
           <div
@@ -1489,23 +1801,26 @@ export default function FBOrderView() {
               }}
               style={{
                 padding: '16px',
-                border: `1px solid ${!isScheduled ? 'var(--red-bright)' : 'var(--border)'}`,
-                borderRadius: '8px',
+                border: `1.5px solid ${!isScheduled ? '#C62839' : 'rgba(198, 40, 57, 0.12)'}`,
+                borderRadius: '16px',
                 textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all .2s',
-                background: !isScheduled ? 'rgba(154, 174, 71, 0.08)' : 'var(--surface2)',
-                color: 'var(--cream)',
+                background: !isScheduled ? 'rgba(198, 40, 57, 0.05)' : '#ffffff',
+                color: !isScheduled ? '#C62839' : '#8c7d75',
                 fontSize: '0.85rem',
+                fontWeight: 600,
                 minHeight: '44px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                fontFamily: '"Outfit", sans-serif',
+                boxShadow: !isScheduled ? 'none' : '0 2px 6px rgba(198, 40, 57, 0.02)',
               }}
             >
               <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
-                <Clock size={28} style={{ color: 'var(--red-bright)' }} />
+                <Clock size={24} style={{ color: !isScheduled ? '#C62839' : '#8c7d75' }} />
               </div>
               Order Now
             </div>
@@ -1522,23 +1837,26 @@ export default function FBOrderView() {
               }}
               style={{
                 padding: '16px',
-                border: `1px solid ${isScheduled ? 'var(--red-bright)' : 'var(--border)'}`,
-                borderRadius: '8px',
+                border: `1.5px solid ${isScheduled ? '#C62839' : 'rgba(198, 40, 57, 0.12)'}`,
+                borderRadius: '16px',
                 textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all .2s',
-                background: isScheduled ? 'rgba(154, 174, 71, 0.08)' : 'var(--surface2)',
-                color: 'var(--cream)',
+                background: isScheduled ? 'rgba(198, 40, 57, 0.05)' : '#ffffff',
+                color: isScheduled ? '#C62839' : '#8c7d75',
                 fontSize: '0.85rem',
+                fontWeight: 600,
                 minHeight: '44px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                fontFamily: '"Outfit", sans-serif',
+                boxShadow: isScheduled ? 'none' : '0 2px 6px rgba(198, 40, 57, 0.02)',
               }}
             >
               <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
-                <CalendarClock size={28} style={{ color: 'var(--red-bright)' }} />
+                <CalendarClock size={24} style={{ color: isScheduled ? '#C62839' : '#8c7d75' }} />
               </div>
               Schedule for Later
             </div>
@@ -1557,8 +1875,12 @@ export default function FBOrderView() {
                     style={{
                       display: 'block',
                       fontSize: '0.8rem',
-                      color: 'var(--muted)',
-                      marginBottom: '6px',
+                      color: '#8c7d75',
+                      fontWeight: 600,
+                      marginBottom: '8px',
+                      fontFamily: '"Outfit", sans-serif',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
                     }}
                   >
                     Date *
@@ -1571,12 +1893,14 @@ export default function FBOrderView() {
                     onChange={(e) => setScheduleDate(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: '#000',
-                      borderRadius: '8px',
-                      colorScheme: 'dark',
+                      padding: '14px 16px',
+                      background: '#ffffff',
+                      border: '1px solid rgba(198, 40, 57, 0.15)',
+                      color: '#1e140f',
+                      borderRadius: '16px',
+                      fontSize: '0.92rem',
+                      fontFamily: '"Outfit", sans-serif',
+                      outline: 'none',
                     }}
                   />
                 </div>
@@ -1586,8 +1910,12 @@ export default function FBOrderView() {
                     style={{
                       display: 'block',
                       fontSize: '0.8rem',
-                      color: 'var(--muted)',
-                      marginBottom: '6px',
+                      color: '#8c7d75',
+                      fontWeight: 600,
+                      marginBottom: '8px',
+                      fontFamily: '"Outfit", sans-serif',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
                     }}
                   >
                     Time *
@@ -1598,11 +1926,14 @@ export default function FBOrderView() {
                     onChange={(e) => setScheduleTime(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      color: '#000',
-                      borderRadius: '8px',
+                      padding: '14px 16px',
+                      background: '#ffffff',
+                      border: '1px solid rgba(198, 40, 57, 0.15)',
+                      color: '#1e140f',
+                      borderRadius: '16px',
+                      fontSize: '0.92rem',
+                      fontFamily: '"Outfit", sans-serif',
+                      outline: 'none',
                       cursor: 'pointer',
                     }}
                   >
@@ -1619,18 +1950,20 @@ export default function FBOrderView() {
                 <div
                   style={{
                     marginTop: '12px',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    background: 'rgba(154, 174, 71, 0.1)',
-                    border: '1px solid rgba(154, 174, 71, 0.25)',
+                    padding: '14px',
+                    borderRadius: '16px',
+                    background: 'rgba(198, 40, 57, 0.05)',
+                    border: '1px solid rgba(198, 40, 57, 0.12)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                     fontSize: '0.82rem',
-                    color: 'var(--cream)',
+                    color: '#C62839',
+                    fontWeight: 600,
+                    fontFamily: '"Outfit", sans-serif',
                   }}
                 >
-                  <CalendarClock size={16} style={{ color: 'var(--red-bright)', flexShrink: 0 }} />
+                  <CalendarClock size={16} style={{ color: '#C62839', flexShrink: 0 }} />
                   Your order will be prepared for{' '}
                   <strong>
                     {new Date(scheduleDate + 'T00:00:00').toLocaleDateString('en-US', {
@@ -1645,7 +1978,7 @@ export default function FBOrderView() {
             </motion.div>
           )}
 
-          <h3 style={{ fontSize: '1rem', marginBottom: '16px', color: 'var(--cream)' }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: '#1e140f', fontFamily: '"Outfit", sans-serif', letterSpacing: '-0.2px' }}>
             Delivery Details
           </h3>
           <div className="form-group" style={{ marginBottom: '16px' }}>
@@ -1654,8 +1987,12 @@ export default function FBOrderView() {
               style={{
                 display: 'block',
                 fontSize: '0.8rem',
-                color: 'var(--muted)',
-                marginBottom: '6px',
+                color: '#8c7d75',
+                fontWeight: 600,
+                marginBottom: '8px',
+                fontFamily: '"Outfit", sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
               }}
             >
               Full Name *
@@ -1668,12 +2005,17 @@ export default function FBOrderView() {
               placeholder="Dela Cruz"
               style={{
                 width: '100%',
-                padding: '12px',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                color: '#000',
-                borderRadius: '8px',
+                padding: '14px 16px',
+                background: '#ffffff',
+                border: '1px solid rgba(198, 40, 57, 0.15)',
+                color: '#1e140f',
+                borderRadius: '16px',
+                fontSize: '0.92rem',
+                outline: 'none',
+                fontFamily: '"Outfit", sans-serif',
               }}
+              onFocus={(e) => (e.target.style.borderColor = '#C62839')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)')}
             />
           </div>
           <div className="form-group" style={{ marginBottom: '16px' }}>
@@ -1682,8 +2024,12 @@ export default function FBOrderView() {
               style={{
                 display: 'block',
                 fontSize: '0.8rem',
-                color: 'var(--muted)',
-                marginBottom: '6px',
+                color: '#8c7d75',
+                fontWeight: 600,
+                marginBottom: '8px',
+                fontFamily: '"Outfit", sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
               }}
             >
               Phone Number *
@@ -1693,26 +2039,158 @@ export default function FBOrderView() {
               type="tel"
               inputMode="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="09XX XXX XXXX"
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+              placeholder="09123456789"
               style={{
                 width: '100%',
-                padding: '12px',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                color: '#000',
-                borderRadius: '8px',
+                padding: '14px 16px',
+                background: '#ffffff',
+                border: '1px solid rgba(198, 40, 57, 0.15)',
+                color: '#1e140f',
+                borderRadius: '16px',
+                fontSize: '0.92rem',
+                outline: 'none',
+                fontFamily: '"Outfit", sans-serif',
               }}
+              onFocus={(e) => (e.target.style.borderColor = '#C62839')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)')}
             />
           </div>
+
+          {/* Map Pin Picker */}
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.8rem',
+                color: '#8c7d75',
+                fontWeight: 600,
+                marginBottom: '8px',
+                fontFamily: '"Outfit", sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Pin Your Delivery Location
+            </label>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+              <button
+                type="button"
+                onClick={handleUseMyLocation}
+                disabled={isLocating}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  background: '#ffffff',
+                  border: '1px solid #C62839',
+                  color: '#C62839',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: '"Outfit", sans-serif',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(198, 40, 57, 0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#ffffff';
+                }}
+              >
+                <Navigation
+                  size={13}
+                  style={{ transform: 'rotate(45deg)' }}
+                />
+                {isLocating ? 'Locating...' : 'Use my location'}
+              </button>
+              {coords && (
+                <span style={{ fontSize: '0.78rem', color: '#8c7d75', fontWeight: 500, fontFamily: '"Outfit", sans-serif' }}>
+                  Selected: {coords[0].toFixed(4)}, {coords[1].toFixed(4)}
+                </span>
+              )}
+            </div>
+
+            {/* Leaflet Map Wrapper */}
+            <div
+              style={{
+                height: '260px',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(198, 40, 57, 0.03)',
+                background: '#ffffff',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            >
+              <MapContainer
+                center={coords}
+                zoom={13}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={false}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {coords && (
+                  <Marker
+                    position={coords}
+                    draggable={true}
+                    icon={getCustomIcon()}
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const marker = e.target;
+                        if (marker != null) {
+                          const newPos = marker.getLatLng();
+                          setCoords([newPos.lat, newPos.lng]);
+                          reverseGeocode(newPos.lat, newPos.lng);
+                        }
+                      },
+                    }}
+                  />
+                )}
+                <MapClickHandler onMapClick={(newCoords) => {
+                  setCoords(newCoords);
+                  reverseGeocode(newCoords[0], newCoords[1]);
+                }} />
+                <ChangeView center={coords} />
+              </MapContainer>
+            </div>
+
+            {/* Inline Graceful Error/Warning Message */}
+            {mapError && (
+              <div
+                style={{
+                  marginTop: '6px',
+                  fontSize: '0.78rem',
+                  color: '#b8353e',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontFamily: '"Outfit", sans-serif',
+                  fontWeight: 500,
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>⚠️</span> {mapError}
+              </div>
+            )}
+          </div>
+
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label
               htmlFor="fb-address"
               style={{
                 display: 'block',
                 fontSize: '0.8rem',
-                color: 'var(--muted)',
-                marginBottom: '6px',
+                color: '#8c7d75',
+                fontWeight: 600,
+                marginBottom: '8px',
+                fontFamily: '"Outfit", sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
               }}
             >
               Delivery Address *
@@ -1725,23 +2203,32 @@ export default function FBOrderView() {
               rows="3"
               style={{
                 width: '100%',
-                padding: '12px',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                color: '#000',
-                borderRadius: '8px',
+                padding: '14px 16px',
+                background: '#ffffff',
+                border: '1px solid rgba(198, 40, 57, 0.15)',
+                color: '#1e140f',
+                borderRadius: '16px',
                 resize: 'none',
+                fontSize: '0.92rem',
+                outline: 'none',
+                fontFamily: '"Outfit", sans-serif',
               }}
+              onFocus={(e) => (e.target.style.borderColor = '#C62839')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)')}
             ></textarea>
           </div>
-          <div className="form-group" style={{ marginBottom: '24px' }}>
+          <div className="form-group" style={{ marginBottom: '28px' }}>
             <label
               htmlFor="fb-notes"
               style={{
                 display: 'block',
                 fontSize: '0.8rem',
-                color: 'var(--muted)',
-                marginBottom: '6px',
+                color: '#8c7d75',
+                fontWeight: 600,
+                marginBottom: '8px',
+                fontFamily: '"Outfit", sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
               }}
             >
               Notes (Optional)
@@ -1754,29 +2241,40 @@ export default function FBOrderView() {
               rows="2"
               style={{
                 width: '100%',
-                padding: '12px',
-                background: 'var(--surface)',
-                border: '1px solid var(--border)',
-                color: '#000',
-                borderRadius: '8px',
+                padding: '14px 16px',
+                background: '#ffffff',
+                border: '1px solid rgba(198, 40, 57, 0.15)',
+                color: '#1e140f',
+                borderRadius: '16px',
                 resize: 'none',
+                fontSize: '0.92rem',
+                outline: 'none',
+                fontFamily: '"Outfit", sans-serif',
               }}
+              onFocus={(e) => (e.target.style.borderColor = '#C62839')}
+              onBlur={(e) => (e.target.style.borderColor = 'rgba(198, 40, 57, 0.15)')}
             ></textarea>
           </div>
 
           <button
-            className="hero-btn main"
             onClick={handlePlaceOrder}
             disabled={isSubmitting}
             style={{
               width: '100%',
               padding: '16px',
-              borderRadius: '8px',
-              fontSize: '1rem',
+              borderRadius: '16px',
+              fontSize: '0.98rem',
               fontWeight: 700,
               border: 'none',
+              background: '#C62839',
+              color: '#ffffff',
               cursor: 'pointer',
+              fontFamily: '"Outfit", sans-serif',
+              transition: 'background-color 0.2s, box-shadow 0.2s',
+              boxShadow: '0 4px 14px rgba(198, 40, 57, 0.25)',
             }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = '#8c3a1d')}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = '#C62839')}
           >
             {isSubmitting ? 'Placing Order...' : `Place Order (₱${cartTotal.toFixed(2)})`}
           </button>
@@ -1793,16 +2291,18 @@ export default function FBOrderView() {
             style={{
               position: 'fixed',
               bottom: 0,
-              left: 0,
-              right: 0,
-              background: 'var(--surface2)',
-              borderTop: '1px solid var(--border)',
-              padding: '16px 20px',
+              left: 'auto',
+              right: 'auto',
+              width: '100%',
+              maxWidth: '480px',
+              background: '#ffffff',
+              borderTop: '1px solid rgba(198, 40, 57, 0.08)',
+              padding: '16px 20px 24px 20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               zIndex: 100,
-              boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
+              boxShadow: '0 -8px 30px rgba(198, 40, 57, 0.04), 0 -2px 6px rgba(0, 0, 0, 0.01)',
             }}
           >
             <div
@@ -1820,45 +2320,47 @@ export default function FBOrderView() {
               <div
                 style={{
                   position: 'relative',
-                  background: 'var(--red)',
-                  width: '40px',
-                  height: '40px',
+                  background: 'rgba(198, 40, 57, 0.08)',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  transition: 'background-color 0.2s',
                 }}
               >
-                <ShoppingBag size={20} color="#fff" />
+                <ShoppingBag size={20} color="#C62839" />
                 <span
                   style={{
                     position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    background: '#fff',
-                    color: 'var(--red)',
-                    width: '20px',
-                    height: '20px',
+                    top: -2,
+                    right: -2,
+                    background: '#C62839',
+                    color: '#ffffff',
+                    width: '18px',
+                    height: '18px',
                     borderRadius: '50%',
-                    fontSize: '0.7rem',
+                    fontSize: '0.68rem',
                     fontWeight: 700,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    fontFamily: '"Outfit", sans-serif',
                   }}
                 >
                   {cartCount}
                 </span>
               </div>
               <div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  Total <span style={{ color: 'var(--red-bright)', fontSize: '0.75rem', textDecoration: 'underline' }}>(View Cart)</span>
+                <div style={{ fontSize: '0.78rem', color: '#8c7d75', fontFamily: '"Outfit", sans-serif', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
+                  Total <span style={{ color: '#C62839', fontSize: '0.75rem', fontWeight: 600 }}>(View Cart)</span>
                 </div>
                 <div
                   style={{
-                    fontFamily: '"Playfair Display", serif',
-                    fontSize: '1.1rem',
-                    color: 'var(--cream)',
+                    fontFamily: '"Outfit", sans-serif',
+                    fontSize: '1.2rem',
+                    color: '#C62839',
                     fontWeight: 700,
                   }}
                 >
@@ -1867,15 +2369,22 @@ export default function FBOrderView() {
               </div>
             </div>
             <button
-              className="hero-btn main"
               onClick={() => setView('checkout')}
               style={{
-                padding: '10px 24px',
-                borderRadius: '8px',
+                padding: '12px 28px',
+                borderRadius: '16px',
                 border: 'none',
-                fontSize: '0.9rem',
+                background: '#C62839',
+                color: '#ffffff',
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                fontFamily: '"Outfit", sans-serif',
                 cursor: 'pointer',
+                transition: 'background-color 0.2s, transform 0.1s',
+                boxShadow: '0 4px 12px rgba(198, 40, 57, 0.2)',
               }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = '#8c3a1d')}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = '#C62839')}
             >
               Checkout
             </button>
@@ -1896,7 +2405,7 @@ export default function FBOrderView() {
               style={{
                 position: 'fixed',
                 inset: 0,
-                background: 'rgba(0, 0, 0, 0.7)',
+                background: 'rgba(0, 0, 0, 0.4)',
                 zIndex: 900,
               }}
             />
@@ -1912,15 +2421,16 @@ export default function FBOrderView() {
                 left: 0,
                 right: 0,
                 maxHeight: '80vh',
-                background: 'var(--card-bg)',
-                borderTopLeftRadius: '20px',
-                borderTopRightRadius: '20px',
-                borderTop: '1px solid var(--border)',
+                background: '#FAF7F2',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                borderTop: '1px solid rgba(198, 40, 57, 0.08)',
                 zIndex: 901,
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.5)',
-                color: 'var(--cream)',
+                boxShadow: '0 -10px 40px rgba(198, 40, 57, 0.06)',
+                color: '#1e140f',
+                fontFamily: '"Outfit", sans-serif',
               }}
             >
               {/* Handle bar for dragging visual */}
@@ -1928,10 +2438,9 @@ export default function FBOrderView() {
                 style={{
                   width: '40px',
                   height: '4px',
-                  background: 'var(--border)',
+                  background: '#e2e8f0',
                   borderRadius: '2px',
                   margin: '12px auto 8px auto',
-                  opacity: 0.7,
                 }}
               />
               
@@ -1942,22 +2451,22 @@ export default function FBOrderView() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '8px 20px 16px 20px',
-                  borderBottom: '1px solid var(--border)',
+                  borderBottom: '1px solid rgba(198, 40, 57, 0.06)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShoppingBag size={20} style={{ color: 'var(--red-bright)' }} />
-                  <span style={{ fontWeight: 700, fontSize: '1.1rem', fontFamily: '"Playfair Display", serif' }}>Your Cart</span>
-                  <span style={{ fontSize: '0.8rem', background: 'rgba(211, 18, 27, 0.15)', color: 'var(--red-bright)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                  <ShoppingBag size={20} style={{ color: '#C62839' }} />
+                  <span style={{ fontWeight: 700, fontSize: '1.15rem', fontFamily: '"Outfit", sans-serif', letterSpacing: '-0.3px' }}>Your Cart</span>
+                  <span style={{ fontSize: '0.8rem', background: 'rgba(198, 40, 57, 0.08)', color: '#C62839', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
                     {cartCount} {cartCount === 1 ? 'item' : 'items'}
                   </span>
                 </div>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   style={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--cream)',
+                    background: 'rgba(198, 40, 57, 0.05)',
+                    border: 'none',
+                    color: '#C62839',
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
@@ -1984,7 +2493,7 @@ export default function FBOrderView() {
                 }}
               >
                 {cart.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#8c7d75' }}>
                     <ShoppingBag size={48} style={{ margin: '0 auto 16px auto', opacity: 0.3 }} />
                     <p>Your cart is empty</p>
                   </div>
@@ -1996,54 +2505,56 @@ export default function FBOrderView() {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderBottom: '1px solid rgba(198, 40, 57, 0.06)',
                         paddingBottom: '12px',
                       }}
                     >
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', paddingRight: '12px' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{c.name}</span>
-                        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>₱{(c.price * c.qty).toFixed(2)}</span>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem', color: '#1e140f' }}>{c.name}</span>
+                        <span style={{ color: '#8c7d75', fontSize: '0.82rem', fontWeight: 500 }}>₱{(c.price * c.qty).toFixed(2)}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <button
                           type="button"
                           onClick={() => changeQty(c.cartKey, -1)}
                           style={{
-                            background: 'var(--surface)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--cream)',
+                            background: 'rgba(198, 40, 57, 0.06)',
+                            border: 'none',
+                            color: '#C62839',
                             width: '28px',
                             height: '28px',
-                            borderRadius: '8px',
+                            borderRadius: '50%',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '1rem',
                             padding: 0,
+                            transition: 'background-color 0.2s',
                           }}
                         >
                           &#8722;
                         </button>
-                        <span style={{ fontSize: '0.95rem', fontWeight: 700, minWidth: '20px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 600, minWidth: '20px', textAlign: 'center', color: '#1e140f' }}>
                           {c.qty}
                         </span>
                         <button
                           type="button"
                           onClick={() => changeQty(c.cartKey, 1)}
                           style={{
-                            background: 'var(--surface)',
-                            border: '1px solid var(--border)',
-                            color: 'var(--cream)',
+                            background: 'rgba(198, 40, 57, 0.06)',
+                            border: 'none',
+                            color: '#C62839',
                             width: '28px',
                             height: '28px',
-                            borderRadius: '8px',
+                            borderRadius: '50%',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '1rem',
                             padding: 0,
+                            transition: 'background-color 0.2s',
                           }}
                         >
                           +
@@ -2057,9 +2568,9 @@ export default function FBOrderView() {
               {/* Footer */}
               <div
                 style={{
-                  padding: '20px',
-                  borderTop: '1px solid var(--border)',
-                  background: 'var(--card-bg)',
+                  padding: '20px 20px 28px 20px',
+                  borderTop: '1px solid rgba(198, 40, 57, 0.08)',
+                  background: '#ffffff',
                 }}
               >
                 <div
@@ -2070,13 +2581,13 @@ export default function FBOrderView() {
                     marginBottom: '16px',
                   }}
                 >
-                  <span style={{ fontSize: '0.95rem', color: 'var(--muted)' }}>Subtotal</span>
+                  <span style={{ fontSize: '0.95rem', color: '#8c7d75', fontWeight: 500 }}>Subtotal</span>
                   <span
                     style={{
-                      fontFamily: '"Playfair Display", serif',
+                      fontFamily: '"Outfit", sans-serif',
                       fontSize: '1.25rem',
                       fontWeight: 700,
-                      color: 'var(--red-bright)',
+                      color: '#C62839',
                     }}
                   >
                     ₱{cartTotal.toFixed(2)}
@@ -2088,19 +2599,23 @@ export default function FBOrderView() {
                     setView('checkout');
                   }}
                   disabled={cart.length === 0}
-                  className="hero-btn main"
                   style={{
                     width: '100%',
                     padding: '16px',
-                    borderRadius: '10px',
-                    fontSize: '1rem',
+                    borderRadius: '16px',
+                    fontSize: '0.95rem',
                     fontWeight: 700,
                     border: 'none',
-                    cursor: 'pointer',
+                    background: cart.length === 0 ? '#e2e8f0' : '#C62839',
+                    color: cart.length === 0 ? '#94a3b8' : '#ffffff',
+                    cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     gap: '8px',
+                    fontFamily: '"Outfit", sans-serif',
+                    transition: 'background-color 0.2s, box-shadow 0.2s',
+                    boxShadow: cart.length === 0 ? 'none' : '0 4px 12px rgba(198, 40, 57, 0.2)',
                   }}
                 >
                   Proceed to Checkout <ArrowRight size={18} />

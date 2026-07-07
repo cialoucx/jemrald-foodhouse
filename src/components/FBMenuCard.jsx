@@ -2,27 +2,22 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { getCategoryIcon } from './JapaneseIcons';
-import { Check } from 'lucide-react';
+import { Check, Image as ImageIcon } from 'lucide-react';
 
 export default function FBMenuCard({ item, available = true }) {
   const { addToCart } = useCart();
   const [showVariants, setShowVariants] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   const hasVariants = item.variants && item.variants.length > 0;
   const hasMultipleVariants = item.variants && item.variants.length > 1;
-  
-  const displayPrice = hasMultipleVariants
-    ? `₱${item.variants[0].price} / ₱${item.variants[item.variants.length - 1].price}`
-    : hasVariants
-      ? `₱${item.variants[0].price}`
-      : `₱${item.price.toFixed(2)}`;
 
-  const displayUnit = hasMultipleVariants
-    ? `${item.variants[0].label} / ${item.variants[item.variants.length - 1].label}`
+  const lowestPrice = hasMultipleVariants
+    ? Math.min(...item.variants.map((v) => v.price))
     : hasVariants
-      ? item.variants[0].label
-      : '';
+      ? item.variants[0].price
+      : item.price;
 
   const customImages = {
     // Specific combos
@@ -134,31 +129,62 @@ export default function FBMenuCard({ item, available = true }) {
   return (
     <>
       <div className={`fb-menu-card ${item.stock === 0 || !available ? 'oos' : ''}`}>
-        <div className="fb-card-img-wrapper">
+        <div className="fb-card-img-wrapper" style={{ background: hasCustomImage ? '#ffffff' : '#f1f5f9' }}>
           {hasCustomImage ? (
             <img
               src={customImagePath}
               alt={item.name}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const sibling = e.currentTarget.nextSibling;
+                if (sibling) sibling.style.display = 'flex';
+                e.currentTarget.parentElement.style.backgroundColor = '#f1f5f9';
+              }}
             />
-          ) : (
-            <span className="fb-card-emoji-placeholder">
-              {getCategoryIcon(item.category, 48, 'var(--red-bright)')}
-            </span>
-          )}
+          ) : null}
+          <div
+            className="fb-card-placeholder"
+            style={{
+              display: hasCustomImage ? 'none' : 'flex',
+              width: '100%',
+              height: '100%',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <ImageIcon size={32} strokeWidth={1.5} style={{ color: '#94a3b8' }} />
+          </div>
           
           {item.stock === 0 && <div className="fb-card-oos-overlay">Out of Stock</div>}
           {item.stock > 0 && !available && <div className="fb-card-oos-overlay">Unavailable</div>}
           {item.stock > 0 && available && item.stock <= 5 && (
             <div className="fb-card-low-overlay">Only {item.stock} left</div>
           )}
+        </div>
 
-          {/* Plus Add Button positioned at the bottom right of the image */}
+        <div className="fb-card-body">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flexGrow: 1, minWidth: 0 }}>
+            <div className="fb-card-name">{item.name}</div>
+            {item.desc && <div className="fb-card-desc">{item.desc}</div>}
+            <div className="fb-card-price" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
+              {hasMultipleVariants ? `From ₱${lowestPrice}` : `₱${lowestPrice}`}
+              {!hasMultipleVariants && hasVariants && (
+                <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'normal' }}> · {item.variants[0].label.replace('pcs', ' pcs')}</span>
+              )}
+            </div>
+          </div>
+
           <button
             className={`fb-add-btn ${(item.stock === 0 || !available) ? 'oos-btn' : ''}`}
             onClick={() => {
               if (item.stock === 0 || !available) return;
-              if (hasVariants) {
+              if (hasMultipleVariants) {
+                setSelectedVariant(item.variants[0]);
                 setShowVariants(true);
+              } else if (hasVariants) {
+                addToCart(item, item.variants[0]);
+                setIsAdded(true);
+                setTimeout(() => setIsAdded(false), 1000);
               } else {
                 addToCart(item);
                 setIsAdded(true);
@@ -192,18 +218,9 @@ export default function FBMenuCard({ item, available = true }) {
             </AnimatePresence>
           </button>
         </div>
-
-        <div className="fb-card-body">
-          <div className="fb-card-name">{item.name}</div>
-          {item.desc && <div className="fb-card-desc">{item.desc}</div>}
-          <div className="fb-card-price">
-            {displayPrice}
-            {displayUnit && <span> {displayUnit}</span>}
-          </div>
-        </div>
       </div>
 
-      {/* Variant Picker Modal */}
+      {/* Variant Picker Bottom Sheet */}
       <AnimatePresence>
         {showVariants && (
           <motion.div
@@ -212,111 +229,147 @@ export default function FBMenuCard({ item, available = true }) {
             exit={{ opacity: 0 }}
             className="modal-overlay variant-picker-overlay open"
             onClick={() => setShowVariants(false)}
-            style={{ zIndex: 1000 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: 'rgba(0, 0, 0, 0.4)',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'flex-end',
+              justifyContent: 'center',
+            }}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="modal variant-picker-modal"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              style={{
+                width: '100%',
+                maxWidth: '480px',
+                background: '#ffffff',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                padding: '24px 20px',
+                boxShadow: '0 -8px 30px rgba(0, 0, 0, 0.15)',
+                color: '#1e293b',
+                fontFamily: '"DM Sans", sans-serif',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
+              <div
+                style={{
+                  width: '40px',
+                  height: '4px',
+                  borderRadius: '2px',
+                  background: '#e2e8f0',
+                  margin: '0 auto 16px auto',
+                }}
+              />
               <h3
                 style={{
                   fontFamily: '"Playfair Display", serif',
-                  fontSize: '1.3rem',
-                  color: 'var(--cream)',
-                  marginBottom: '6px',
+                  fontSize: '1.25rem',
+                  color: '#0f172a',
+                  fontWeight: 700,
+                  marginBottom: '4px',
                 }}
               >
                 {item.name}
               </h3>
               <p
-                className="variant-picker-subtitle"
-                style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '20px' }}
+                style={{
+                  fontSize: '0.8rem',
+                  color: '#64748b',
+                  marginBottom: '20px',
+                }}
               >
                 Select your preferred size:
               </p>
 
               <div
-                className="variant-list"
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
-                  marginBottom: '18px',
+                  gap: '8px',
+                  marginBottom: '24px',
                 }}
               >
-                {item.variants.map((v, i) => (
-                  <motion.div
-                    key={i}
-                    whileHover={{
-                      scale: 1.02,
-                      backgroundColor: 'rgba(154, 174, 71, 0.1)',
-                      borderColor: 'var(--red)',
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    className="variant-option"
-                    onClick={() => {
-                      addToCart(item, v);
-                      setShowVariants(false);
-                      setIsAdded(true);
-                      setTimeout(() => setIsAdded(false), 1000);
-                    }}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      width: '100%',
-                      background: 'var(--surface2)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '10px',
-                      padding: '16px 20px',
-                      cursor: 'pointer',
-                      color: 'var(--cream)',
-                      fontFamily: '"DM Sans", sans-serif',
-                    }}
-                  >
-                    <span
-                      className="variant-label"
+                {item.variants.map((v, i) => {
+                  const isSelected = selectedVariant && selectedVariant.label === v.label;
+                  return (
+                    <motion.div
+                      key={i}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => setSelectedVariant(v)}
                       style={{
-                        fontSize: '0.95rem',
-                        fontWeight: 500,
-                        letterSpacing: '1px',
-                        textTransform: 'uppercase',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        width: '100%',
+                        background: isSelected ? 'rgba(198, 40, 57, 0.05)' : '#ffffff',
+                        border: `1.5px solid ${isSelected ? '#C62839' : '#e2e8f0'}`,
+                        borderRadius: '12px',
+                        padding: '16px 20px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      {v.label}
-                    </span>
-                    <span
-                      className="variant-price"
-                      style={{
-                        fontFamily: '"Playfair Display", serif',
-                        fontSize: '1.2rem',
-                        fontWeight: 700,
-                        color: 'var(--red-bright)',
-                      }}
-                    >
-                      ₱{v.price}
-                    </span>
-                  </motion.div>
-                ))}
+                      <span
+                        style={{
+                          fontSize: '0.88rem',
+                          fontWeight: isSelected ? 600 : 500,
+                          color: isSelected ? '#C62839' : '#1e140f',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          fontFamily: '"Outfit", sans-serif',
+                        }}
+                      >
+                        {v.label}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: '"Outfit", sans-serif',
+                          fontSize: '1.05rem',
+                          fontWeight: 700,
+                          color: isSelected ? '#C62839' : '#1e140f',
+                        }}
+                      >
+                        ₱{v.price}
+                      </span>
+                    </motion.div>
+                  );
+                })}
               </div>
 
               <button
-                className="btn-cancel"
-                onClick={() => setShowVariants(false)}
+                onClick={() => {
+                  if (selectedVariant) {
+                    addToCart(item, selectedVariant);
+                    setShowVariants(false);
+                    setIsAdded(true);
+                    setTimeout(() => setIsAdded(false), 1000);
+                  }
+                }}
                 style={{
-                  background: 'none',
-                  border: '1px solid var(--border)',
-                  color: 'var(--muted)',
+                  background: '#C62839',
+                  border: 'none',
+                  color: '#ffffff',
                   width: '100%',
-                  padding: '12px',
-                  borderRadius: '6px',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
                   cursor: 'pointer',
+                  fontFamily: '"Outfit", sans-serif',
+                  transition: 'background-color 0.2s',
+                  boxShadow: '0 4px 12px rgba(198, 40, 57, 0.2)',
                 }}
               >
-                Cancel
+                Add to cart · ₱{selectedVariant ? selectedVariant.price : 0}
               </button>
             </motion.div>
           </motion.div>

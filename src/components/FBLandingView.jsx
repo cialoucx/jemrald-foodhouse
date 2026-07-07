@@ -11,46 +11,10 @@ export default function FBLandingView({ setView }) {
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        background: 'var(--bg)',
+        background: '#FAF7F2', // Uniform background color matching the menu page
       }}
     >
-      {/* Animated Background Rings */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: 0.5,
-          pointerEvents: 'none',
-        }}
-      >
-        <motion.div
-          style={{
-            position: 'absolute',
-            width: '280px',
-            height: '280px',
-            borderRadius: '50%',
-            border: '1px solid rgba(211, 18, 27, 0.15)',
-          }}
-          animate={{ scale: [1, 1.05, 1], rotate: 360 }}
-          transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-        />
-        <motion.div
-          style={{
-            position: 'absolute',
-            width: '480px',
-            height: '480px',
-            borderRadius: '50%',
-            border: '1px solid rgba(211, 18, 27, 0.08)',
-          }}
-          animate={{ scale: [1.05, 1, 1.05], rotate: -360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        />
-      </div>
-
-      {/* Content */}
+      {/* Content Centered Vertically */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -61,43 +25,44 @@ export default function FBLandingView({ setView }) {
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          padding: '40px 20px',
+          padding: '60px 20px',
           zIndex: 1,
           textAlign: 'center',
         }}
       >
-        <div
+        {/* Brand Torii Gate Logo - Larger & Animated */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15, duration: 0.6, ease: 'easeOut' }}
           style={{
-            width: '80px',
-            height: '80px',
-            background: 'var(--red)',
-            borderRadius: '24px',
+            width: '240px',
+            height: '240px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '24px',
-            boxShadow: '0 10px 25px rgba(211, 18, 27, 0.4)',
+            marginBottom: '36px',
           }}
         >
-          <span
+          <img
+            src="/images/logo-torii.png"
+            alt="JR Foodhouse Logo"
             style={{
-              fontFamily: '"Playfair Display", serif',
-              fontSize: '2.5rem',
-              color: '#fff',
-              fontWeight: 800,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
             }}
-          >
-            J
-          </span>
-        </div>
+          />
+        </motion.div>
 
         <h1
           style={{
             fontFamily: '"Playfair Display", serif',
-            fontSize: '2.2rem',
-            color: 'var(--cream)',
-            margin: '0 0 16px 0',
-            lineHeight: 1.2,
+            fontSize: '2.8rem',
+            color: '#2E2A28', // Deep premium charcoal text
+            margin: '0 0 20px 0',
+            lineHeight: 1.15,
+            fontWeight: 800,
           }}
         >
           Authentic Flavors,
@@ -107,34 +72,38 @@ export default function FBLandingView({ setView }) {
 
         <p
           style={{
-            color: 'var(--muted)',
-            fontSize: '1rem',
-            margin: '0 0 40px 0',
-            maxWidth: '300px',
+            color: '#74695E', // Muted secondary brown/gray
+            fontSize: '1.05rem',
+            margin: '0 0 44px 0',
+            maxWidth: '320px',
             lineHeight: 1.5,
+            fontWeight: 400,
           }}
         >
-          Craving something special? Order from Jemrald Foodhouse straight through Messenger.
+          Craving something special?<br />
+          Order authentic Japanese favorites<br />
+          straight through Messenger.
         </p>
 
         <motion.button
-          whileHover={{ scale: 1.05 }}
+          whileHover={{ scale: 1.05, backgroundColor: '#A81F31' }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setView('menu')}
           style={{
-            background: 'var(--red)',
+            background: '#C62839', // Unified Brand Torii Red Accent Button
             border: 'none',
             color: '#fff',
             fontFamily: '"DM Sans", sans-serif',
-            fontSize: '1rem',
+            fontSize: '1.05rem',
             fontWeight: 600,
-            padding: '16px 40px',
-            borderRadius: '30px',
+            padding: '18px 48px',
+            borderRadius: '36px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            boxShadow: '0 8px 20px rgba(211, 18, 27, 0.3)',
+            boxShadow: '0 8px 24px rgba(198, 40, 57, 0.25)',
+            transition: 'background-color 0.2s ease',
           }}
         >
           Order Now <ArrowRight size={18} />

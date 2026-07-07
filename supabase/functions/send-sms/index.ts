@@ -25,58 +25,102 @@ Deno.serve(async (req: any) => {
       return new Response(JSON.stringify({ error: 'Discord configuration missing' }), { status: 500 })
     }
 
-    const totalStr = parseFloat(order.total).toFixed(2)
-    const paymentStr = (order.payment || 'unknown').toUpperCase()
+    const totalStr = parseFloat(order.total || 0).toFixed(2)
+    const rawPayment = order.payment || 'cod'
+    const paymentStr = rawPayment.toLowerCase() === 'gcash' ? '   GCASH   ' : ' CASH ON DELIVERY '
     const items = order.items ? (Array.isArray(order.items) ? order.items : JSON.parse(order.items)) : []
-    const itemsList = items.map((i: any) => `▫️ **${i.name}** x${i.quantity || i.qty || 1}`).join('\n')
 
-    const orderDate = order.created_at ? new Date(order.created_at) : new Date()
-    const dateStr = orderDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' })
-    const timeStr = orderDate.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' })
+    const orderIdStr = `Order #${order.id}`
+    
+    // Calculate spaces between Order ID and Payment Badge inside the borders (width is 38)
+    const padCount = 38 - orderIdStr.length - paymentStr.length
+    const headerPad = ' '.repeat(Math.max(1, padCount))
 
+    // Payment badge ANSI
+    // GCash: Green background, white text (Paid)
+    // COD: Gold background, black text (Dark Gold badge)
+    const badgeAnsi = rawPayment.toLowerCase() === 'gcash'
+      ? `\u001b[1;37;42m${paymentStr}\u001b[30;47m`
+      : `\u001b[1;30;43m${paymentStr}\u001b[30;47m`
+
+    // Format the date/time using standard "Jul 7, 2026 • 6:48 PM" separator
+    const tsFormatted = (() => {
+      const d = order.created_at ? new Date(order.created_at) : new Date();
+      const dateStr = d.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', hour12: true });
+      return `${dateStr} • ${timeStr}`;
+    })()
+
+    const customerName = order.user_name || 'Anonymous'
+
+    // Price (TOTAL) -> Green if paid (GCash), Soft Gold (\u001b[1;33m) if unpaid (COD)
+    const totalColor = rawPayment.toLowerCase() === 'gcash' ? '\u001b[1;32;47m' : '\u001b[1;33;47m'
+    const totalAmount = `${totalColor}₱${totalStr}\u001b[30;47m`
+
+    // Helper to format rows aligned at column 12 with a light gray background (47) and bordered edges
+    const formatFieldRow = (label: string, valueAnsi: string, plainValue: string) => {
+      const labelPad = label.padEnd(12, ' ')
+      const lineText = `${labelPad}${plainValue}`
+      const spaces = ' '.repeat(Math.max(0, 38 - lineText.length))
+      return `\u001b[30;47m│ ${labelPad}${valueAnsi}${spaces} │\u001b[0m`
+    }
+
+    const customerLine = formatFieldRow('Customer', `\u001b[1;30;47m${customerName}\u001b[30;47m`, customerName)
+    const totalLine    = formatFieldRow('Total', totalAmount, `₱${totalStr}`)
+    const placedLine   = formatFieldRow('Placed', `\u001b[1;30;47m${tsFormatted}\u001b[30;47m`, tsFormatted)
+
+    let scheduledLine = ''
     const isScheduled = order.scheduled_date && order.scheduled_time
-    let scheduledStr = ''
     if (isScheduled) {
       const schedDate = new Date(order.scheduled_date + 'T00:00:00')
-      scheduledStr = schedDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + ` at ${order.scheduled_time}`
+      const schedStr = schedDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + ` at ${order.scheduled_time}`
+      scheduledLine = `\n` + formatFieldRow('Scheduled', `\u001b[1;33;47m${schedStr}\u001b[30;47m`, schedStr)
     }
+
+    // Format items list with quantities right aligned (using cross multiplication symbol ×)
+    const formattedItems = items.length
+      ? items.map((i: any) => {
+          let name = i.name || ''
+          if (name.length > 32) {
+            name = name.slice(0, 29) + '...'
+          }
+          const qty = i.quantity || i.qty || 1
+          const qtyStr = `×${qty}`
+          const spaces = ' '.repeat(Math.max(1, 38 - name.length - qtyStr.length))
+          return `\u001b[30;47m│ ${name}${spaces}${qtyStr} │\u001b[0m`
+        }).join('\n')
+      : `\u001b[30;47m│ _No items listed_${' '.repeat(22)} │\u001b[0m`
+
+    // Borders and dividers matching 42 characters total width
+    const topBorder = `\u001b[30;47m┌${'─'.repeat(40)}┐\u001b[0m`
+    const divider = `\u001b[2;30;47m├${'─'.repeat(40)}┤\u001b[0m`
+    const bottomBorder = `\u001b[30;47m└${'─'.repeat(40)}┘\u001b[0m`
+
+    const headerLine = `\u001b[30;47m│ ${orderIdStr}${headerPad}${badgeAnsi} │\u001b[0m`
+
+    const ansiContent = [
+      topBorder,
+      headerLine,
+      divider,
+      customerLine,
+      totalLine,
+      placedLine,
+      scheduledLine,
+      divider,
+      formattedItems,
+      bottomBorder
+    ].filter(Boolean).join('\n')
 
     const adminUrl = `${SITE_URL}/admin?tab=orders`
 
-    // Build fields array
-    const fields: any[] = [
-      { name: "👤 Customer", value: order.user_name || 'Anonymous', inline: false },
-      { name: "💰 Total Amount", value: `**₱${totalStr}**`, inline: true },
-      { name: "💳 Payment Method", value: paymentStr, inline: true },
-    ]
-
-    // Add scheduled delivery field if applicable
-    if (isScheduled) {
-      fields.push({ name: "📅 Scheduled Delivery", value: `**${scheduledStr}**`, inline: false })
-    }
-
-    fields.push(
-      { name: "🕒 Order Placed", value: `${dateStr} at ${timeStr}`, inline: false },
-      { name: "📋 Items Ordered", value: itemsList || "_No items listed_", inline: false },
-    )
-
-    // Add GCash receipt info if present
-    if (order.gcash_ref) {
-      fields.push({ name: "🧾 GCash Ref #", value: `\`${order.gcash_ref}\``, inline: true })
-    }
-
-    fields.push(
-      { name: "🚀 Quick Action", value: `[View Order in Admin Panel](${adminUrl})`, inline: false }
-    )
+    // Embed left border is JR Brand Green (#556B5D)
+    const embedColor = 0x556B5D
 
     // Build embed object
     const embed: any = {
-      title: isScheduled ? `📅 Scheduled Order #${order.id}` : `Order #${order.id}`,
-      url: adminUrl,
-      color: isScheduled ? 0xf59e0b : 0xdb2777,
-      fields,
-      timestamp: new Date().toISOString(),
-      footer: { text: "🥢 Jemrald Foodhouse Admin Portal" }
+      color: embedColor,
+      description: `\`\`\`ansi\n${ansiContent}\n\`\`\`\n` +
+        `Jemrald Foodhouse  ·  **[Open Order →](${adminUrl})**`
     }
 
     // Attach GCash receipt screenshot if available
@@ -84,12 +128,23 @@ Deno.serve(async (req: any) => {
       embed.image = { url: order.gcash_receipt_url }
     }
 
-    // Create a beautiful Discord message using an Embed
+    // Create a beautiful Discord message using an Embed + Button component
     const discordPayload = {
-      content: isScheduled 
-        ? `📅 **Scheduled Order Received!**\n🔗 [Open Admin Dashboard](${adminUrl})`
-        : `🔔 **New Order Received!**\n🔗 [Open Admin Dashboard](${adminUrl})`,
-      embeds: [embed]
+      content: `New order received — **[Open dashboard](${adminUrl})**`,
+      embeds: [embed],
+      components: [
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              style: 5, // Link Button
+              label: "View Order",
+              url: adminUrl
+            }
+          ]
+        }
+      ]
     }
 
     console.log(`[Discord Debug] Sending notification for order ${order.id} (${isScheduled ? 'SCHEDULED' : 'REGULAR'})...`)

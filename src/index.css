@@ -1,11 +1,11 @@
 :root {
   /* JAPANESE PALETTE - Earthy, refined, minimal */
-  --primary: #b8353e; /* Deep red (vermillion) */
-  --primary-dark: #9a2b33;
+  --primary: #C62839; /* Torii Gate Red */
+  --primary-dark: #A81F31; /* Torii Red Hover */
   --primary-light: #d44b55;
-  --secondary: #d4af37; /* Muted gold */
-  --accent: #6b8e6b; /* Soft green (matcha) */
-  --success: #5d8a5d;
+  --secondary: #C58C32; /* Warm Gold */
+  --accent: #5F7567; /* Sage Green */
+  --success: #5F7567;
   --warning: #d4a574;
 
   /* Backward compatibility aliases */
@@ -17,15 +17,15 @@
   --accent-dark: var(--primary-dark);
 
   /* Neutral colors - Warm, earthy */
-  --black: #faf8f5; /* Washi paper */
+  --black: #FAF7F2; /* Warm Cream background */
   --deep: #f0ede8;
   --card-bg: #ffffff;
-  --cream: #2d2a26; /* Sumi ink */
+  --cream: #2E2A28; /* Deep charcoal text */
   --muted: #7a756d;
-  --border: rgba(45, 42, 38, 0.08);
-  --border2: rgba(45, 42, 38, 0.05);
-  --surface: rgba(45, 42, 38, 0.03);
-  --surface2: rgba(184, 53, 62, 0.06);
+  --border: rgba(46, 42, 40, 0.08);
+  --border2: rgba(46, 42, 40, 0.05);
+  --surface: rgba(46, 42, 40, 0.03);
+  --surface2: rgba(198, 40, 57, 0.06);
 
   --nav-bg: #ffffff;
   --glass-bg: #ffffff;
@@ -5057,77 +5057,81 @@ tr:hover td {
 }
 
 .fb-menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 8px 0;
 }
 
 .fb-menu-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: none;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  padding: 16px;
   position: relative;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 20px rgba(198, 40, 57, 0.03), 0 1px 3px rgba(0, 0, 0, 0.01);
   transition: transform 0.2s, box-shadow 0.2s;
+  gap: 16px;
 }
 
 .fb-menu-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 30px rgba(198, 40, 57, 0.06), 0 2px 6px rgba(0, 0, 0, 0.01);
 }
 
 .fb-card-img-wrapper {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
   background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid #f1f5f9;
+  border: none;
 }
 
 .fb-card-img-wrapper img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  padding: 8px;
+  object-fit: cover;
+  padding: 0;
 }
 
 .fb-card-emoji-placeholder {
-  font-size: 3rem;
+  font-size: 2.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .fb-add-btn {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #008a4b; /* Grab Green */
+  background: #C62839; /* Unified brand Torii Gate Red */
   color: #ffffff;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-  transition: transform 0.1s, background-color 0.2s;
+  box-shadow: 0 4px 12px rgba(198, 40, 57, 0.2);
+  flex-shrink: 0;
+  transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
 }
 
 .fb-add-btn:hover {
-  background: #00703c;
+  background: #A81F31; /* Torii Gate Red Hover */
+  box-shadow: 0 6px 16px rgba(198, 40, 57, 0.3);
 }
 
 .fb-add-btn:active {
@@ -5135,60 +5139,66 @@ tr:hover td {
 }
 
 .fb-add-btn.oos-btn {
-  background: #cbd5e1;
+  background: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 .fb-add-btn.oos-btn:hover {
-  background: #cbd5e1;
+  background: #e2e8f0;
 }
 
 .fb-card-body {
-  padding: 10px;
+  padding: 0;
   display: flex;
-  flex-direction: column;
-  flex-grow: 1;
+  flex-direction: row;
+  align-items: center;
   justify-content: space-between;
+  flex-grow: 1;
+  gap: 16px;
 }
 
 .fb-card-name {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #1e293b;
-  line-height: 1.4;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e140f;
+  line-height: 1.35;
   margin-bottom: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 2.8em;
+  letter-spacing: -0.2px;
 }
 
 .fb-card-desc {
-  font-size: 0.7rem;
-  color: #64748b;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.78rem;
+  color: #8c7d75;
   line-height: 1.4;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fb-card-price {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.92rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #C62839;
+  margin-top: auto;
 }
 
 .fb-card-price span {
-  font-size: 0.65rem;
-  color: #64748b;
+  font-size: 0.72rem;
+  color: #8c7d75;
   font-weight: normal;
 }
 

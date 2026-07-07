@@ -49,6 +49,10 @@ export default function CartDrawer() {
       setError('Please fill in all required fields.');
       return;
     }
+    if (phone.length !== 11) {
+      setError('Phone number must be exactly 11 digits (e.g. 09123456789).');
+      return;
+    }
     setError('');
     setStep(2);
   };
@@ -343,8 +347,8 @@ export default function CartDrawer() {
                         <input
                           type="tel"
                           value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="09XX XXX XXXX"
+                          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                          placeholder="09123456789"
                         />
                       </div>
                       <div className="form-group">

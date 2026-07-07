@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./fb-discord-bridge
+      dockerfile: Dockerfile
+    container_name: jemrald-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_ORDERS_CHANNEL_ID=${DISCORD_ORDERS_CHANNEL_ID}
+      - DISCORD_UPDATES_CHANNEL_ID=${DISCORD_UPDATES_CHANNEL_ID}
+      - FB_VERIFY_TOKEN=${FB_VERIFY_TOKEN}
+    networks:
+      - jemrald-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jemrald-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - jemrald-network
+
+networks:
+  jemrald-network:
+    driver: bridge

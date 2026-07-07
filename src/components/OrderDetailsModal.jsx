@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, User, MapPin, Hash, Calendar } from 'lucide-react';
+import { X, ShoppingBag, User, MapPin, Hash, Calendar, Phone, FileText, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../context/ToastContext';
@@ -30,6 +30,28 @@ const ETA_MAP = {
   out_for_delivery: '~8 min',
   delivered: 'Arrived!',
   cancelled: 'Cancelled',
+};
+
+const parseLocationFromNotes = (notes) => {
+  if (!notes) return null;
+  const match = notes.match(/\[LOC:\s*([-\d.]+),\s*([-\d.]+)\]/);
+  if (match) {
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[2]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+  return null;
+};
+
+const getCleanedNotes = (notes) => {
+  if (!notes) return '';
+  return notes
+    .replace(/\[LOC:\s*([-\d.]+),\s*([-\d.]+)\]/g, '')
+    .replace(/\[SCHEDULED:[^\]]*\]/g, '')
+    .replace(/^\s*—\s*/, '')
+    .trim();
 };
 
 export default function OrderDetailsModal({ isOpen, onClose, order, onStatusUpdate }) {
@@ -312,6 +334,20 @@ export default function OrderDetailsModal({ isOpen, onClose, order, onStatusUpda
                   {order.user_name}
                 </div>
                 <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{order.user_email}</div>
+                {order.phone && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: 'var(--muted)',
+                      fontSize: '0.82rem',
+                      marginTop: '2px',
+                    }}
+                  >
+                    <Phone size={14} color="var(--muted)" /> {order.phone}
+                  </div>
+                )}
                 {order.address && (
                   <div
                     style={{
@@ -320,14 +356,76 @@ export default function OrderDetailsModal({ isOpen, onClose, order, onStatusUpda
                       gap: '8px',
                       color: 'var(--muted)',
                       fontSize: '0.82rem',
-                      marginTop: '6px',
+                      marginTop: '4px',
                     }}
                   >
                     <MapPin size={14} /> {order.address}
                   </div>
                 )}
+                {(() => {
+                  const coords = parseLocationFromNotes(order.notes);
+                  if (!coords) return null;
+                  return (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: 'var(--red-bright)',
+                        fontSize: '0.8rem',
+                        marginTop: '4px',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        width: 'fit-content'
+                      }}
+                    >
+                      <ExternalLink size={12} /> Pin Location: {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+                    </a>
+                  );
+                })()}
               </div>
             </div>
+
+            {/* Notes */}
+            {(() => {
+              const cleaned = getCleanedNotes(order.notes);
+              if (!cleaned) return null;
+              return (
+                <div style={{ marginBottom: '24px' }}>
+                  <h3
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1.5px',
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <FileText size={14} /> Order Notes
+                  </h3>
+                  <div
+                    style={{
+                      background: 'rgba(0,0,0,0.15)',
+                      padding: '14px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(255,255,255,0.04)',
+                      fontSize: '0.85rem',
+                      color: 'var(--cream)',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    {cleaned}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Order Items */}
             <div style={{ marginBottom: '24px' }}>

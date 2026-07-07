@@ -91,6 +91,34 @@ jemrald-foodhouse/
    npm run dev
    ```
 
+### Running with Docker
+
+You can build and run both the React/Vite frontend and the Node/Express backend services together inside Docker containers using Docker Compose.
+
+1. **Setup environment variables**
+   Copy the `.env.example` file to `.env` in the root directory:
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in the required Supabase and Discord environment variables in the newly created `.env` file.
+
+2. **Build and start both services**
+   ```bash
+   docker compose up --build
+   ```
+   Once started, the frontend will be served at `http://localhost` (port 80) and the backend API will run on `http://localhost:3000`.
+
+3. **Running services in isolation**
+   For debugging or testing a single service, you can run it in isolation:
+   - **Just the Backend API**:
+     ```bash
+     docker compose up --build backend
+     ```
+   - **Just the Frontend**:
+     ```bash
+     docker compose up --build frontend
+     ```
+
 ## Technology Stack
 
 - **Frontend**: React 19, Vite, React Router

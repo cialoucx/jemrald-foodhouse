@@ -47,6 +47,11 @@ app.use((err, req, res, next) => {
 async function start() {
   try {
     await initDiscordBot();
+  } catch (err) {
+    console.error('⚠️ [Discord Bot] Failed to initialize (continuing without Discord):', err.message);
+  }
+
+  try {
     app.listen(PORT, () => {
       console.log(`\n🍱 Jemrald FB↔Discord Bridge running on port ${PORT}`);
       console.log(`   Health: http://localhost:${PORT}/health`);

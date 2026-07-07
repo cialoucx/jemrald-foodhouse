@@ -70,6 +70,10 @@ export default function ProfilePage() {
   }
 
   const handleSave = async () => {
+    if (phone && phone.length !== 11) {
+      showToast('Phone number must be exactly 11 digits (e.g. 09123456789).', true);
+      return;
+    }
     setSaving(true);
     try {
       await updateProfile({ name, phone, address });
@@ -362,8 +366,8 @@ export default function ProfilePage() {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="09XX XXX XXXX"
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="09123456789"
                 style={inputStyle}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--red)')}
                 onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
