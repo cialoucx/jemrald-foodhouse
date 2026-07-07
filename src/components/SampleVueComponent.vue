@@ -204,7 +204,7 @@ const estPoints = computed(() => {
   cursor: pointer;
   display: flex;
   align-items: center;
-  justifyContent: center;
+  justify-content: center;
   transition: all 0.2s ease;
   font-weight: 600;
   padding: 0;
