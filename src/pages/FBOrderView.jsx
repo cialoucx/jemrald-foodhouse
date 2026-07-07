@@ -234,7 +234,7 @@ export default function FBOrderView() {
   const geocodeTimeoutRef = useRef(null);
 
   const forwardGeocode = async (queryAddress) => {
-    if (!queryAddress || queryAddress.trim().length < 6) return;
+    if (!queryAddress || queryAddress.trim().length < 3) return;
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1&countrycodes=ph`,
@@ -258,7 +258,7 @@ export default function FBOrderView() {
   };
 
   const fetchSuggestions = async (query) => {
-    if (!query || query.trim().length < 4) {
+    if (!query || query.trim().length < 3) {
       setSuggestions([]);
       return;
     }
