@@ -1463,10 +1463,12 @@ export default function FBOrderView() {
                           : cat === 'kimbap'
                             ? 'Kimbap'
                             : cat === 'solo'
-                              ? 'Solo'
+                              ? 'Sushi Solo'
                               : cat === 'sushi'
                                 ? 'Sushi Platter'
-                                : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                : cat === 'rice'
+                                  ? 'Rice Meal'
+                                  : cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </motion.button>
                 ))}
               </div>

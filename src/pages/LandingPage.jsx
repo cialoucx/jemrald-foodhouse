@@ -299,7 +299,7 @@ export default function LandingPage() {
             className={`cat-pill ${filter === 'solo' ? 'active' : ''}`}
             onClick={() => setFilter('solo')}
           >
-            <Utensils size={16} /> Solo
+            <Utensils size={16} /> Sushi Solo
           </button>
           <button
             className={`cat-pill ${filter === 'salad' ? 'active' : ''}`}

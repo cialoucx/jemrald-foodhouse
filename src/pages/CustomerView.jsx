@@ -576,7 +576,7 @@ export default function CustomerView() {
                 {cat === 'solo' && (
                   <>
                     <SushiIconSmall size={16} color="currentColor" style={{ marginRight: 4 }} />{' '}
-                    Solo
+                    Sushi Solo
                   </>
                 )}
                 {cat === 'salad' && (
@@ -598,7 +598,7 @@ export default function CustomerView() {
                 )}
                 {cat === 'rice' && (
                   <>
-                    <RiceIconSmall size={16} color="currentColor" style={{ marginRight: 4 }} /> Rice
+                    <RiceIconSmall size={16} color="currentColor" style={{ marginRight: 4 }} /> Rice Meal
                   </>
                 )}
               </span>

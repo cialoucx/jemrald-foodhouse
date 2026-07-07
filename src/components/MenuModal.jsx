@@ -167,12 +167,12 @@ export default function MenuModal({ isOpen, onClose, onSave, editingItem, invent
     { value: 'sushi', label: 'Sushi Platter' },
     { value: 'baked-sushi', label: 'Baked Sushi' },
     { value: 'kimbap', label: 'Kimbap' },
-    { value: 'solo', label: 'Solo' },
+    { value: 'solo', label: 'Sushi Solo' },
     { value: 'salad', label: 'Salad' },
     { value: 'takoyaki-8pcs', label: 'Takoyaki (8pcs)' },
     { value: 'takoyaki-10pcs', label: 'Takoyaki (10pcs)' },
     { value: 'add-ons', label: 'Add-ons' },
-    { value: 'rice', label: 'Rice' },
+    { value: 'rice', label: 'Rice Meal' },
   ];
 
   const labelStyle = {
