@@ -104,6 +104,12 @@ function ChangeView({ center }) {
   return null;
 }
 
+const isMessengerBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || navigator.vendor || window.opera;
+  return (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1);
+};
+
 export default function FBOrderView() {
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,25 +189,47 @@ export default function FBOrderView() {
     }
     setIsLocating(true);
     setMapError('');
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
+
+    const optionsHigh = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
+    const optionsLow = { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 };
+
+    const getPosition = (options) => {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+    };
+
+    getPosition(optionsHigh)
+      .then((position) => {
         const { latitude, longitude } = position.coords;
         const newCoords = [latitude, longitude];
         setCoords(newCoords);
         reverseGeocode(latitude, longitude);
         setIsLocating(false);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        if (error.code === error.PERMISSION_DENIED) {
-          setMapError('Location permission denied. Please search or pin your address manually.');
-        } else {
-          setMapError('Could not retrieve your location. Please pin manually.');
-        }
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+      })
+      .catch((error) => {
+        console.warn('High accuracy geolocation failed, trying low accuracy...', error);
+        // Fallback to low accuracy (WiFi/cell tower triangulation)
+        getPosition(optionsLow)
+          .then((position) => {
+            const { latitude, longitude } = position.coords;
+            const newCoords = [latitude, longitude];
+            setCoords(newCoords);
+            reverseGeocode(latitude, longitude);
+            setIsLocating(false);
+          })
+          .catch((lowError) => {
+            console.error('Geolocation failed completely:', lowError);
+            if (lowError.code === lowError.PERMISSION_DENIED) {
+              setMapError('Location permission denied or blocked. Please search or pin your address manually.');
+            } else if (lowError.code === lowError.TIMEOUT) {
+              setMapError('Location request timed out. Please search or pin manually.');
+            } else {
+              setMapError('Could not retrieve your location. Please pin manually.');
+            }
+            setIsLocating(false);
+          });
+      });
   };
 
   // Reverse Geocoding via Nominatim
@@ -2097,6 +2125,27 @@ export default function FBOrderView() {
             </motion.div>
           )}
 
+          {isMessengerBrowser() && (
+            <div
+              style={{
+                background: 'rgba(198, 40, 57, 0.04)',
+                border: '1px dashed rgba(198, 40, 57, 0.3)',
+                borderRadius: '16px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                fontSize: '0.8rem',
+                color: '#6e5a51',
+                lineHeight: '1.45',
+                fontFamily: '"Outfit", sans-serif',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#C62839', marginBottom: '4px' }}>
+                <span>📱</span> Messenger In-App Browser Detected
+              </div>
+              Geolocation prompts are blocked by Messenger settings. For location pinning to work correctly, please tap the <strong>(···)</strong> menu at the top right and choose <strong>"Open in Browser"</strong> or <strong>"Open in Safari/Chrome"</strong>.
+            </div>
+          )}
+
           <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '12px', color: '#1e140f', fontFamily: '"Outfit", sans-serif', letterSpacing: '-0.2px' }}>
             Delivery Details
           </h3>
@@ -2287,13 +2336,30 @@ export default function FBOrderView() {
                   fontSize: '0.78rem',
                   color: '#b8353e',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: '6px',
                   fontFamily: '"Outfit", sans-serif',
                   fontWeight: 500,
+                  background: 'rgba(184, 53, 62, 0.05)',
+                  border: '1px solid rgba(184, 53, 62, 0.15)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
+                  lineHeight: '1.4',
                 }}
               >
-                <span style={{ fontWeight: 600 }}>⚠️</span> {mapError}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                  <span>⚠️</span> {mapError}
+                </div>
+                <div style={{ color: '#6e5a51', fontSize: '0.75rem', fontWeight: 400 }}>
+                  <strong>Troubleshooting location settings:</strong>
+                  <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                    <li>Ensure <strong>Location Services/GPS</strong> is enabled in your device settings.</li>
+                    <li>If you are in an in-app browser (like Messenger), tap the menu <strong>(···)</strong> at the top right and select <strong>"Open in Browser"</strong> or <strong>"Open in Safari/Chrome"</strong>.</li>
+                    <li>Click the site settings icon (lock/tune) in your browser address bar to reset location permissions.</li>
+                    <li>Alternatively, search for your address in the box below or drag the pin on the map.</li>
+                  </ul>
+                </div>
               </div>
             )}
           </div>
