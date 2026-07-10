@@ -183,7 +183,18 @@ export default function LandingPage() {
     <div className="jf-landing">
       {/* 1. Nav */}
       <nav className={`jf-nav ${scrolled ? 'jf-nav-scrolled' : ''}`}>
-        <div className="jf-nav-brand">Jemrald</div>
+        <div className="jf-nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="/images/logo-foodhouse.png"
+            alt="Jemrald Logo"
+            style={{
+              height: '38px',
+              width: '38px',
+              objectFit: 'contain',
+            }}
+          />
+          <span>Jemrald</span>
+        </div>
 
         <div className="jf-nav-links">
           <a href="#menu">Menu</a>
@@ -233,20 +244,20 @@ export default function LandingPage() {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
+            style={{ width: '380px', padding: '12px' }}
           >
-            <div className="mini-card-img">
+            <div className="mini-card-img" style={{ height: '210px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff', borderRadius: '12px', padding: '12px' }}>
               <img
-                src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80"
-                alt="Special Bowl"
+                src="/images/logo-foodhouse.png"
+                alt="Jem & Rald Foodhouse Logo"
+                style={{ width: '100%', height: 'auto', maxHeight: '100%', objectFit: 'contain' }}
               />
             </div>
-            <div className="mini-card-info">
-              <h4>Signature Beef Bowl</h4>
-              <div className="mini-stats">
-                <span className="rating">
-                  <Star size={12} className="star-icon" fill="currentColor" /> 4.9
-                </span>
-                <span className="orders">1.2k+ Orders</span>
+            <div className="mini-card-info" style={{ marginTop: '12px' }}>
+              <h4 style={{ fontFamily: '"Playfair Display", serif', fontSize: '1.2rem', fontWeight: 700 }}>Jem & Rald Foodhouse</h4>
+              <div className="mini-stats" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--muted)', fontSize: '0.85rem', marginTop: '4px' }}>
+                <span>Japanese Culinary Arts</span>
+                <span>⭐ 5.0 (500+ Reviews)</span>
               </div>
             </div>
           </motion.div>
@@ -440,7 +451,18 @@ export default function LandingPage() {
 
       {/* 8. Footer */}
       <footer className="jf-footer">
-        <div className="jf-footer-brand">Jemrald</div>
+        <div className="jf-footer-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="/images/logo-foodhouse.png"
+            alt="Jemrald Logo"
+            style={{
+              height: '30px',
+              width: '30px',
+              objectFit: 'contain',
+            }}
+          />
+          <span>Jemrald</span>
+        </div>
         <div className="jf-footer-links">
           <a href="#">Privacy</a>
           <a href="#">Terms</a>

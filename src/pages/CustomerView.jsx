@@ -268,9 +268,20 @@ export default function CustomerView() {
           justifyContent: 'space-between',
         }}
       >
-        <div className="logo-text" style={{ textDecoration: 'none', cursor: 'default' }}>
-          <span className="brand">Jemrald</span>
-          <span className="tagline">Foodhouse</span>
+        <div className="logo-text" style={{ textDecoration: 'none', cursor: 'default', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img
+            src="/images/logo-foodhouse.png"
+            alt="Jemrald Logo"
+            style={{
+              height: '36px',
+              width: '36px',
+              objectFit: 'contain',
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span className="brand" style={{ display: 'block', lineHeight: 1.1 }}>Jemrald</span>
+            <span className="tagline" style={{ display: 'block', marginTop: '1px' }}>Foodhouse</span>
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

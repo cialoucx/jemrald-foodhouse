@@ -1184,14 +1184,11 @@ export default function FBOrderView() {
             textAlign: 'center',
           }}
         >
-          {/* Brand Torii Gate Logo - Larger & Animated */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.15, duration: 0.6, ease: 'easeOut' }}
+          {/* Brand Torii Gate Logo - Larger & Static */}
+          <div
             style={{
-              width: '240px',
-              height: '240px',
+              width: '280px',
+              height: '280px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1199,15 +1196,15 @@ export default function FBOrderView() {
             }}
           >
             <img
-              src="/images/logo-torii.png"
-              alt="JR Foodhouse Logo"
+              src="/images/logo-foodhouse.png"
+              alt="Jemrald Foodhouse Logo"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
               }}
             />
-          </motion.div>
+          </div>
 
           <h1
             style={{

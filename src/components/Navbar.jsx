@@ -45,31 +45,43 @@ export default function Navbar() {
         justifyContent: 'space-between',
       }}
     >
-      <Link to="/" className="logo-text" style={{ textDecoration: 'none' }}>
-        <span
+      <Link to="/" className="logo-text" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <img
+          src="/images/logo-foodhouse.png"
+          alt="Jemrald Logo"
           style={{
-            fontFamily: '"Poppins", sans-serif',
-            fontSize: '1.3rem',
-            fontWeight: 700,
-            color: 'var(--primary)',
-            letterSpacing: '1px',
-            display: 'block',
+            height: '42px',
+            width: '42px',
+            objectFit: 'contain',
           }}
-        >
-          Jemrald
-        </span>
-        <span
-          style={{
-            fontSize: '0.5rem',
-            letterSpacing: '3px',
-            color: 'var(--muted)',
-            textTransform: 'uppercase',
-            display: 'block',
-            marginTop: '2px',
-          }}
-        >
-          Foodhouse
-        </span>
+        />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span
+            style={{
+              fontFamily: '"Poppins", sans-serif',
+              fontSize: '1.2rem',
+              fontWeight: 700,
+              color: 'var(--primary)',
+              letterSpacing: '1px',
+              display: 'block',
+              lineHeight: '1.1',
+            }}
+          >
+            Jemrald
+          </span>
+          <span
+            style={{
+              fontSize: '0.5rem',
+              letterSpacing: '3px',
+              color: 'var(--muted)',
+              textTransform: 'uppercase',
+              display: 'block',
+              marginTop: '2px',
+            }}
+          >
+            Foodhouse
+          </span>
+        </div>
       </Link>
 
       {!isLanding && (
