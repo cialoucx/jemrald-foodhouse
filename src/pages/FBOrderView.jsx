@@ -1727,7 +1727,7 @@ export default function FBOrderView() {
                   0918 749 1194
                 </div>
                 <div style={{ color: '#8c7d75', fontSize: '0.8rem', marginTop: '4px', fontWeight: 500, fontFamily: '"Outfit", sans-serif' }}>
-                  Jemrald F.
+                  Jemmalyn A.
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: '16px' }}>

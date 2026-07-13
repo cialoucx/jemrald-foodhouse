@@ -490,7 +490,7 @@ export default function CartDrawer() {
                                 marginTop: '4px',
                               }}
                             >
-                              Jemrald F.
+                              Jemmalyn A.
                             </div>
                           </div>
                           <div className="form-group" style={{ marginBottom: '16px' }}>
