@@ -1,4 +1,4 @@
-# Jemrald Foodhouse
+# Jemrald Foodhouse — Ordering Platform
 
 ![React](https://img.shields.io/badge/react-19.2-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
 ![Vue](https://img.shields.io/badge/vue-3.5-%234FC08D.svg?style=for-the-badge&logo=vuedotjs&logoColor=white)
