@@ -1,49 +1,99 @@
 # Jemrald Foodhouse
 
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
-![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
-![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
-![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![React](https://img.shields.io/badge/react-19.2-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![Vue](https://img.shields.io/badge/vue-3.5-%234FC08D.svg?style=for-the-badge&logo=vuedotjs&logoColor=white)
+![Vite](https://img.shields.io/badge/vite-6.0-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-2.99-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![NodeJS](https://img.shields.io/badge/node.js-18+-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
 ![Discord.js](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-Jemrald Foodhouse is a full-stack web application designed to facilitate an efficient and reliable food ordering system. Developed with React and Supabase, the platform provides a responsive user interface, real-time order tracking, comprehensive inventory management, and an automated integration bridging Facebook Messenger and Discord to streamline internal operations.
+**Jemrald Foodhouse** is a modern, full-stack web application designed for a seamless Japanese-inspired food ordering experience. Built with React 19, Supabase, and Node.js, the platform offers an intuitive ordering interface, GrabFood-style address autocomplete with map selection, real-time order status tracking, automated inventory management, and a custom Facebook Messenger to Discord bridge for kitchen operations.
 
-## Key Features
+---
 
-- **Dynamic Ordering Interface**: An interactive menu featuring category filtering, live search functionality, and a responsive design enhanced by Framer Motion.
-- **Real-Time Order Tracking**: Integrates Supabase real-time subscriptions to allow customers to track their order status through distinct stages (Pending, Preparing, On the Way, Delivered).
-- **Secure Payment Processing**: Supports Cash on Delivery and GCash, incorporating strict validation for 13-digit reference numbers and secure receipt image uploads via Supabase Storage.
-- **Automated Inventory Management**: Implements dynamic stock verification and automated ingredient deduction upon checkout to ensure accurate inventory levels and prevent overselling.
-- **Order Scheduling**: Provides functionality for customers to place immediate orders or schedule deliveries for specific future dates and times.
-- **System Integrations (Facebook & Discord)**: Includes a custom Node.js backend that automatically forwards incoming order data and receipt attachments to a designated Discord channel, enabling efficient staff coordination.
-- **Administrative Dashboard**: Features role-based access control for administrators to manage menu catalogs, monitor inventory metrics, and process live orders.
+## 🌟 Key Features
 
-## Project Architecture
+- 🏮 **Japanese Brand & Design System**: Custom red Torii Gate brand logo and Japanese-inspired visual elements styled with responsive Vanilla CSS and Framer Motion micro-animations.
+- 📍 **GrabFood-Style Address Autocomplete & Maps**:
+  - Live address search autocomplete powered by OpenStreetMap / Nominatim geocoding, restricted to the Philippines.
+  - Interactive Leaflet map pin placement and GPS location detection.
+  - Fallback location handling and troubleshooting alerts tailored for Facebook Messenger in-app browsers.
+- 🍱 **Dynamic Menu & Ordering Interface**:
+  - Categorized menu catalog (e.g., *Sushi Solo*, *Rice Meal*, *Combos*) with category filters and instant live search.
+  - Interactive modals for menu item details, customized ingredient options, and cart drawer management.
+- ⚡ **Real-Time Order Tracking**:
+  - Customer order status tracking with live Supabase subscriptions through stages: *Pending*, *Preparing*, *On the Way*, and *Delivered*.
+  - Dual view support for main site users (`OrderTracker`) and Facebook Messenger webview (`FBOrderTracker`).
+- 💳 **Secure Payment Processing**:
+  - Options for **Cash on Delivery (COD)** and **GCash** (Account: *Jemmalyn A.*).
+  - Built-in validation for 13-digit GCash reference numbers and secure receipt image upload via Supabase Storage.
+- 📦 **Automated Inventory & Ingredient Management**:
+  - Dynamic stock verification and automatic ingredient deduction upon checkout.
+  - Interactive ingredient catalog modal in the admin dashboard to monitor stock levels and prevent overselling.
+- 🤖 **Facebook Messenger & Discord Bridge**:
+  - Dedicated webview routes (`FBOrderView`, `FBLandingView`) optimized for mobile Messenger users.
+  - Express.js backend service (`fb-discord-bridge`) that forwards new orders and payment receipt attachments instantly to staff Discord channels.
+- 🛠️ **Administrative Dashboard**:
+  - Centralized order fulfillment board, real-time status management, catalog CRUD operations, and inventory metrics.
+- ⚡ **Hybrid Framework Architecture**:
+  - Integrates Vue 3 components seamlessly within React 19 using a lightweight custom React-Vue wrapper (`VueWrapper`).
+
+---
+
+## 🏗️ Project Architecture
 
 ```text
 jemrald-foodhouse/
 ├── src/
-│   ├── components/       # Reusable React components (MenuCard, Modals)
-│   ├── context/          # React context providers for application state
-│   ├── lib/              # Utility functions and Supabase client configuration
-│   ├── pages/            # Primary application views (FBOrderView, Dashboard)
-│   └── App.jsx           # Main application routing and entry point
-├── fb-discord-bridge/    # Node.js backend service for third-party integrations
-├── scripts/              # Utility scripts for database seeding and management
-├── public/               # Static assets
-└── supabase/             # Database schema and migration files
+│   ├── components/       # Reusable React & Vue components
+│   │   ├── AuthModal.jsx            # User authentication modal
+│   │   ├── CartDrawer.jsx           # Slide-out cart drawer with location picker
+│   │   ├── Chatbot.jsx              # Customer assistant chatbot widget
+│   │   ├── FBLandingView.jsx        # Landing hero for FB Messenger webview
+│   │   ├── FBMenuCard.jsx           # Card component optimized for FB webview
+│   │   ├── FBOrderTracker.jsx       # Order status tracker for Messenger users
+│   │   ├── IngredientModal.jsx      # Inventory & ingredient stock modal
+│   │   ├── MenuCard.jsx             # Standard menu item card
+│   │   ├── MenuModal.jsx            # Item detail & customization modal
+│   │   ├── Navbar.jsx               # Header navigation bar with cart badge
+│   │   ├── NotificationPanel.jsx    # Real-time alert notifications
+│   │   ├── OrderTracker.jsx         # Real-time customer order tracker
+│   │   ├── SampleVueComponent.vue   # Embedded Vue 3 component example
+│   │   └── VueWrapper.jsx           # React wrapper for Vue components
+│   ├── context/          # React state providers (Auth, Cart, Orders)
+│   ├── lib/              # Supabase client setup, geocoding helpers, API utils
+│   ├── pages/            # Page layouts
+│   │   ├── AdminView.jsx            # Full admin management portal
+│   │   ├── CustomerView.jsx         # Main customer ordering view
+│   │   ├── FBOrderView.jsx          # Mobile FB Messenger optimized view
+│   │   ├── LandingPage.jsx          # Marketing landing page
+│   │   └── ProfilePage.jsx          # Customer profile & past orders
+│   ├── App.jsx           # Application routing and setup
+│   ├── main.jsx          # React app entry point
+│   └── index.css         # Global design system & theme styling
+├── fb-discord-bridge/    # Express backend service for Discord webhook relay
+├── scripts/              # Database seeding and migration helper scripts
+├── supabase/             # Database schema, migrations, and storage policies
+├── Dockerfile            # Docker build setup for frontend
+├── docker-compose.yml    # Docker Compose config for full multi-service deployment
+└── nginx.conf            # Nginx web server configuration for production builds
 ```
 
-## Setup and Installation
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18 or higher)
 - [npm](https://www.npmjs.com/)
-- A configured [Supabase](https://supabase.com/) project
-- A configured Discord Bot Token for backend integration
+- A [Supabase](https://supabase.com/) project (PostgreSQL database & Storage bucket)
+- A configured Discord Bot Token and Channel ID (for order notifications)
 
-### Installation Steps
+---
+
+### Installation & Local Setup
 
 1. **Clone the repository**
    ```bash
@@ -56,81 +106,82 @@ jemrald-foodhouse/
    npm install
    ```
 
-3. **Install backend dependencies**
+3. **Install backend bridge dependencies**
    ```bash
    cd fb-discord-bridge
    npm install
    cd ..
    ```
 
-4. **Environment Configuration**
-   Create a `.env` file in the root directory for the frontend application:
+4. **Configure Environment Variables**
+
+   Create a `.env` file in the root directory for the React frontend:
    ```env
-   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_URL=https://your-supabase-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
-   Create a `.env` file in the `fb-discord-bridge` directory for the backend service:
+
+   Create a `.env` file inside `fb-discord-bridge/` for the integration backend:
    ```env
-   DISCORD_BOT_TOKEN=your_discord_token
-   DISCORD_CHANNEL_ID=your_channel_id
-   SUPABASE_URL=your_supabase_url
+   DISCORD_BOT_TOKEN=your_discord_bot_token
+   DISCORD_CHANNEL_ID=your_discord_channel_id
+   SUPABASE_URL=https://your-supabase-project.supabase.co
    SUPABASE_KEY=your_supabase_service_role_key
+   PORT=3000
    ```
 
-### Running the Application
+---
 
-1. **Start the Frontend Development Server**
+### Running Locally
+
+1. **Start the Frontend Server**
    ```bash
    npm run dev
    ```
-   The application will be accessible at `http://localhost:5173`.
+   The frontend will run at `http://localhost:5173`.
 
-2. **Start the Integration Backend**
+2. **Start the Discord Bridge Backend**
    ```bash
    cd fb-discord-bridge
    npm run dev
    ```
+   The backend API service will listen on `http://localhost:3000`.
 
-### Running with Docker
+---
 
-You can build and run both the React/Vite frontend and the Node/Express backend services together inside Docker containers using Docker Compose.
+### 🐳 Running with Docker
 
-1. **Setup environment variables**
-   Copy the `.env.example` file to `.env` in the root directory:
+You can launch both the frontend and backend bridge services using Docker Compose:
+
+1. **Set up environment variables**
    ```bash
    cp .env.example .env
    ```
-   Fill in the required Supabase and Discord environment variables in the newly created `.env` file.
+   Populate `.env` with your Supabase and Discord credentials.
 
-2. **Build and start both services**
+2. **Build and start services**
    ```bash
    docker compose up --build
    ```
-   Once started, the frontend will be served at `http://localhost` (port 80) and the backend API will run on `http://localhost:3000`.
-
-3. **Running services in isolation**
-   For debugging or testing a single service, you can run it in isolation:
-   - **Just the Backend API**:
-     ```bash
-     docker compose up --build backend
-     ```
-   - **Just the Frontend**:
-     ```bash
-     docker compose up --build frontend
-     ```
-
-## Technology Stack
-
-- **Frontend**: React 19, Vite, React Router
-- **Styling & UI**: Vanilla CSS (CSS Variables), Framer Motion, Lucide React
-- **Backend & Database**: Supabase (PostgreSQL, Realtime APIs, Storage, Authentication)
-- **Services & Integration**: Express.js, Discord.js, Axios, Node.js
-
-## Future Roadmap
-
-- **Payment Gateway Integration**: Automate transaction processing via APIs such as PayMongo or Stripe.
-- **Data Analytics Dashboard**: Develop data visualization tools to track sales trends and inventory turnover rates.
-- **Logistics Integration**: Implement automated delivery dispatching through third-party logistics providers (e.g., Lalamove, Grab).
+   - Frontend: `http://localhost` (Port 80)
+   - Integration Backend: `http://localhost:3000`
 
 ---
-*This repository serves to demonstrate competencies in full-stack web development, scalable architecture design, and system integration within a production-like environment.*
+
+## 🛠️ Technology Stack
+
+| Domain | Technologies |
+| :--- | :--- |
+| **Frontend Core** | React 19, Vue 3 (Hybrid component support), Vite 6, React Router v7 |
+| **Styling & UI** | Vanilla CSS (Japanese theme design tokens), Framer Motion, Lucide Icons |
+| **Maps & Location** | Leaflet, React-Leaflet, OpenStreetMap / Nominatim Geocoding API |
+| **Forms & Validation** | React Hook Form, Zod |
+| **Backend & Database** | Supabase (Postgres Database, Realtime subscriptions, Storage, Auth) |
+| **Integration Backend**| Node.js, Express.js, Discord.js API |
+| **Containerization** | Docker, Docker Compose, Nginx |
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
